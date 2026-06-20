@@ -38,17 +38,20 @@ var creditTransactionTypes = map[TNGTransactionType]struct{}{
 }
 
 type TNGProvider struct {
-	engine *rule.Engine
+	engine         *rule.Engine
+	accountMapping map[string]string
 }
 
 func New(excludeKeywords, includeKeywords []string, categories []models.CategoryRule, accountMappings map[string]string) providers.Provider {
 	return &TNGProvider{
-		engine: rule.NewEngine(excludeKeywords, includeKeywords, categories),
+		engine:         rule.NewEngine(excludeKeywords, includeKeywords, categories),
+		accountMapping: accountMappings,
 	}
 }
 
 func (p *TNGProvider) Reload(excludeKeywords, includeKeywords []string, categories []models.CategoryRule, accountMappings map[string]string) {
 	p.engine.Reload(excludeKeywords, includeKeywords, categories)
+	p.accountMapping = accountMappings
 }
 
 func (p *TNGProvider) shouldSkip(description string) bool {
@@ -94,12 +97,12 @@ func (p *TNGProvider) ParseCSV(ctx context.Context, fileReader io.Reader) ([]mod
 		reports = append(reports, report)
 	}
 
-	result := p.toActualReports(ctx, logger, reports)
+	result := p.toActualReports(ctx, logger, reports, "")
 	logger.InfoContext(ctx, "csv parsing complete", "parsed_count", len(result))
 	return result, nil
 }
 
-func (p *TNGProvider) toActualReports(ctx context.Context, logger *slog.Logger, reports []TNGReport) []models.ActualBudgetReport {
+func (p *TNGProvider) toActualReports(ctx context.Context, logger *slog.Logger, reports []TNGReport, accountName string) []models.ActualBudgetReport {
 	whitespacePattern := regexp.MustCompile(`\s+`)
 	var result []models.ActualBudgetReport
 
@@ -134,8 +137,14 @@ func (p *TNGProvider) toActualReports(ctx context.Context, logger *slog.Logger, 
 
 		categoryGroup, category := p.matchCategory(description)
 
+		if p.accountMapping != nil {
+			if mapped, ok := p.accountMapping[accountName]; ok {
+				accountName = mapped
+			}
+		}
+
 		result = append(result, models.ActualBudgetReport{
-			Account:       "Current",
+			Account:       accountName,
 			Date:          parsedDate.Format("2006-01-02"),
 			Payee:         "",
 			Notes:         description,
@@ -158,7 +167,7 @@ func (p *TNGProvider) ParsePDFText(ctx context.Context, text string) ([]models.A
 
 	logger.InfoContext(ctx, "pdf parsing started", "blocks", len(reports))
 
-	result := p.toActualReports(ctx, logger, reports)
+	result := p.toActualReports(ctx, logger, reports, "")
 	logger.InfoContext(ctx, "pdf parsing complete", "parsed_count", len(result))
 	return result, nil
 }

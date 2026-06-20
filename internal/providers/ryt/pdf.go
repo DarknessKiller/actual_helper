@@ -8,29 +8,19 @@ import (
 )
 
 func extractAccountName(text string) string {
-	const marker = "Account Transactions"
-	idx := strings.Index(text, marker)
-	if idx == -1 {
-		return ""
-	}
-	after := text[idx+len(marker):]
-	lines := strings.Split(after, "\n")
-	for _, line := range lines {
-		line = strings.TrimSpace(line)
-		if line == "" || strings.HasPrefix(line, "/") {
-			continue
-		}
-		if parts := strings.SplitN(line, " / ", 2); len(parts) == 2 && strings.TrimSpace(parts[0]) != "" {
-			return strings.TrimSpace(parts[0])
+	if strings.Contains(text, "Statement") {
+		lines := strings.Split(text, "\n")
+		for _, line := range lines {
+			line = strings.TrimSpace(line)
+
+			if strings.HasSuffix(line, "Statement") {
+				return strings.TrimSpace(
+					strings.TrimSuffix(line, "Statement"),
+				)
+			}
 		}
 	}
-	// Fallback: if no " / " found, use first non-empty non-slash line
-	for _, line := range lines {
-		line = strings.TrimSpace(line)
-		if line != "" && !strings.HasPrefix(line, "/") {
-			return line
-		}
-	}
+
 	return ""
 }
 
@@ -173,9 +163,9 @@ func parseBlock(block string) (RytReport, error) {
 func findBalanceHeader(body string) int {
 	// Try several patterns in order of specificity
 	patterns := []string{
-		"Balance\nBaki",    // separate lines (English then Malay)
-		"Balance / Baki",   // on same line with slash
-		"\nBaki\n",         // standalone "Baki" on its own line
+		"Balance\nBaki",  // separate lines (English then Malay)
+		"Balance / Baki", // on same line with slash
+		"\nBaki\n",       // standalone "Baki" on its own line
 	}
 	for _, p := range patterns {
 		if idx := strings.Index(body, p); idx != -1 {
