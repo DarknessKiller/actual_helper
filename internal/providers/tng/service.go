@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"actual-helper/internal/models"
+	"actual-helper/internal/providers"
 	"actual-helper/internal/rule"
 )
 
@@ -40,7 +41,7 @@ type TNGProvider struct {
 	engine *rule.Engine
 }
 
-func New(excludeKeywords, includeKeywords []string, categories []models.CategoryRule) *TNGProvider {
+func New(excludeKeywords, includeKeywords []string, categories []models.CategoryRule) providers.Provider {
 	return &TNGProvider{
 		engine: rule.NewEngine(excludeKeywords, includeKeywords, categories),
 	}
