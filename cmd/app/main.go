@@ -35,6 +35,15 @@ func main() {
 		fuego.WithAddr(fmt.Sprintf("0.0.0.0:%d", env.Port)),
 	)
 
+	if env.Environment == "production" {
+		server.OpenAPI.Description().Servers = []*openapi3.Server{
+			{
+				URL:         env.PublicURL,
+				Description: "Production server",
+			},
+		}
+	}
+
 	convertService := services.NewConvertService(registry, loader)
 	handler := handlers.NewConvertHandler(convertService)
 	fuego.Use(server, ratelimit.Middleware)
