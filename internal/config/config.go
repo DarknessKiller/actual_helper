@@ -14,6 +14,7 @@ type ProviderConfig struct {
 	ExcludeKeywords []string              `json:"exclude_keywords"`
 	IncludeKeywords []string              `json:"include_keywords"`
 	Categories      []models.CategoryRule `json:"categories"`
+	AccountMappings map[string]string     `json:"account_mappings"`
 }
 
 type config struct {
@@ -82,7 +83,8 @@ func (cfg config) providerConfig(name string) ProviderConfig {
 	if p, ok := cfg.Providers[name]; ok {
 		pc.ExcludeKeywords = append(pc.ExcludeKeywords, p.ExcludeKeywords...)
 		pc.IncludeKeywords = append(pc.IncludeKeywords, p.IncludeKeywords...)
-		pc.Categories = append(p.Categories, pc.Categories...)
+		pc.Categories = append(pc.Categories, p.Categories...)
+		pc.AccountMappings = p.AccountMappings
 	}
 
 	return pc

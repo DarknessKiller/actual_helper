@@ -11,7 +11,7 @@ import (
 
 var _ = Describe("ParsePDFText", func() {
 	var (
-		provider = tng.New(nil, nil, nil)
+		provider = tng.New(nil, nil, nil, nil)
 		ctx      = context.Background()
 	)
 

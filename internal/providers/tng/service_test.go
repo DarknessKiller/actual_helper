@@ -12,7 +12,7 @@ import (
 
 var _ = Describe("TNGProvider", func() {
 	var (
-		provider = tng.New(nil, nil, nil)
+		provider = tng.New(nil, nil, nil, nil)
 		ctx      = context.Background()
 	)
 

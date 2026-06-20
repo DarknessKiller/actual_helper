@@ -72,6 +72,6 @@ func (service *ConvertService) reloadProvider(name string, provider providers.Pr
 	}
 	pc := service.loader.ProviderConfig(name)
 	if cp, ok := provider.(providers.ConfigurableProvider); ok {
-		cp.Reload(pc.ExcludeKeywords, pc.IncludeKeywords, pc.Categories)
+		cp.Reload(pc.ExcludeKeywords, pc.IncludeKeywords, pc.Categories, pc.AccountMappings)
 	}
 }

@@ -41,13 +41,13 @@ type TNGProvider struct {
 	engine *rule.Engine
 }
 
-func New(excludeKeywords, includeKeywords []string, categories []models.CategoryRule) providers.Provider {
+func New(excludeKeywords, includeKeywords []string, categories []models.CategoryRule, accountMappings map[string]string) providers.Provider {
 	return &TNGProvider{
 		engine: rule.NewEngine(excludeKeywords, includeKeywords, categories),
 	}
 }
 
-func (p *TNGProvider) Reload(excludeKeywords, includeKeywords []string, categories []models.CategoryRule) {
+func (p *TNGProvider) Reload(excludeKeywords, includeKeywords []string, categories []models.CategoryRule, accountMappings map[string]string) {
 	p.engine.Reload(excludeKeywords, includeKeywords, categories)
 }
 

@@ -14,9 +14,9 @@ type Provider interface {
 }
 
 // ConfigurableProvider is an optional interface providers can implement
-// to receive runtime config updates (exclude/include keywords, category rules).
+// to receive runtime config updates (exclude/include keywords, category rules, account mappings).
 type ConfigurableProvider interface {
-	Reload(excludeKeywords, includeKeywords []string, categories []models.CategoryRule)
+	Reload(excludeKeywords, includeKeywords []string, categories []models.CategoryRule, accountMappings map[string]string)
 }
 
 type Registry struct {
