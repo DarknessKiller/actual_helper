@@ -41,8 +41,11 @@ func (handler *ConvertHandler) Convert(c fuego.ContextNoBody) (any, error) {
 		return nil, fuego.InternalServerError{Title: "Conversion failed", Detail: err.Error()}
 	}
 
+	currentTime := time.Now()
+	fileName := fmt.Sprintf("%s_actual_budget_%s.csv", providerName, currentTime.Local().Format(time.RFC3339))
+
 	c.Response().Header().Set("Content-Type", "text/csv")
-	c.Response().Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s_actual_budget.csv", providerName))
+	c.Response().Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s", fileName))
 	c.Response().Write(csvBytes)
 
 	slog.Info("response sent", "provider", providerName, "bytes", len(csvBytes))
