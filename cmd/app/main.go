@@ -7,6 +7,7 @@ import (
 	"actual-helper/internal/handlers"
 	rytprov "actual-helper/internal/providers/ryt"
 	tngprov "actual-helper/internal/providers/tng"
+	"actual-helper/internal/ratelimit"
 	"actual-helper/internal/services"
 
 	"github.com/getkin/kin-openapi/openapi3"
@@ -33,6 +34,7 @@ func main() {
 
 	convertService := services.NewConvertService(registry, loader)
 	handler := handlers.NewConvertHandler(convertService)
+	fuego.Use(server, ratelimit.Middleware)
 	handlers.RegisterConvertRoutes(server, handler)
 
 	if err := server.Run(); err != nil {
