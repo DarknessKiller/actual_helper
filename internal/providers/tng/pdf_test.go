@@ -2,9 +2,8 @@ package tng_test
 
 import (
 	"context"
-	"os"
-	"path/filepath"
 
+	"actual-helper/internal/models"
 	"actual-helper/internal/providers/tng"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -13,7 +12,7 @@ import (
 
 var _ = Describe("ParsePDFText", func() {
 	var (
-		provider = tng.New()
+		provider = tng.New(nil, nil, nil)
 		ctx      = context.Background()
 	)
 
@@ -128,7 +127,9 @@ RM150.00`
 		Expect(reports[1].Amount).To(Equal("100.00"))
 	})
 
-	It("skips transactions with filtered description", func() {
+	It("skips transactions with filtered description when exclude keywords match", func() {
+		filterProvider := tng.New([]string{"Quick Reload Payment"}, nil, nil)
+
 		text := `TNG WALLET TRANSACTION
 Date
 Status
@@ -147,7 +148,7 @@ Quick Reload Payment
 RM100.00
 RM150.00`
 
-		reports, err := provider.ParsePDFText(ctx, text)
+		reports, err := filterProvider.ParsePDFText(ctx, text)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(reports).To(BeEmpty())
 	})
@@ -165,15 +166,11 @@ RM150.00`
 		Expect(reports).To(BeEmpty())
 	})
 
-	It("applies categories when rules file is present", func() {
-		tmpDir := GinkgoT().TempDir()
-		tmpFile := filepath.Join(tmpDir, "categories.json")
-		os.WriteFile(tmpFile, []byte(`[
-			{"keyword":"ninja","group":"Delivery","category":"Parcel"}
-		]`), 0644)
-
-		GinkgoT().Setenv("TNG_CATEGORIES_PATH", tmpFile)
-		categorizingProvider := tng.New()
+	It("applies categories when provider has category rules", func() {
+		categorizingProvider := tng.New(
+			nil, nil,
+			[]models.CategoryRule{{Keyword: "ninja", Group: "Delivery", Category: "Parcel"}},
+		)
 
 		text := `TNG WALLET TRANSACTION
 Date

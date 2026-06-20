@@ -51,6 +51,7 @@ Responsibilities:
 Services MAY:
 
 * Access the provider registry
+* Access the config loader
 * Perform transformations
 * Log process flow
 * Return domain errors
@@ -121,25 +122,53 @@ Always empty in `ActualBudgetReport`. Description value goes in `Notes`.
 
 `isCredit()` returns true for: `Reload`, `Receive from Wallet`, `DUITNOW_RECEIVEFROM`, `Refund`. Credits are positive amounts, debits are negative.
 
-### Filtered Descriptions (TNG)
+### Provider Config
 
-Transactions with descriptions containing these are skipped: `Quick Reload Payment`, `Daily Interest`, `Via eWallet to GO+`.
+A single JSON file (`PROVIDER_CONFIG_PATH` env var) supplies all per-provider rules.
+
+Format:
+```json
+{
+  "global": {
+    "exclude_keywords": ["Global Noise"],
+    "include_keywords": [],
+    "categories": [{"keyword": "shopee", "group": "Shopping", "category": "Online"}]
+  },
+  "providers": {
+    "tng": {
+      "exclude_keywords": ["Quick Reload Payment", "Via eWallet to GO+"],
+      "include_keywords": ["Daily Interest"],
+      "categories": [
+        {"keyword": "grab", "group": "Food & Dining", "category": "Delivery"}
+      ]
+    }
+  }
+}
+```
+
+`include_keywords` overrides `exclude_keywords`: if a description matches any include keyword, it is kept even if an exclude keyword also matches.
+
+### Hot-Reload
+
+No background goroutines. The `config.Loader` checks the config file's mtime on every call to `ProviderConfig()`. The service calls `loader.ProviderConfig(name)` and pushes the merged rules to the provider via `ConfigurableProvider.Reload()` **before each request** (`services/convert.go:reloadProvider`). Configuration changes take effect on the next request with zero delay.
+
+Missing or invalid config — the loader logs a warning and returns empty rules (no crash).
 
 ### Shared Mapping
 
-`toActualReports()` is a shared mapper used by both `ParseCSV` and `ParsePDFText`. It handles filtering (non-Success status, filtered descriptions), date parsing, credit/debit sign, categorization, and `ActualBudgetReport` construction.
+`toActualReports()` is a shared mapper used by both `ParseCSV` and `ParsePDFText`. It handles filtering (non-Success status, filtered descriptions via `shouldSkip`), date parsing, credit/debit sign, categorization (via `matchCategory`), and `ActualBudgetReport` construction.
 
-### Auto-Categorization
+### Filtering Rules (TNG)
 
-* Rules file: JSON at `TNG_CATEGORIES_PATH` env var
-* Format: `[{"keyword":"ninja","group":"Delivery","category":"Parcel"}]`
-* Case-insensitive, first match wins
-* Missing/invalid file logs warning and continues without categories
-* Hot-reload via mtime check on each request
+The provider's `shouldSkip()` checks `exclude_keywords` and `include_keywords` on each description. If any `include_keyword` matches, the row is kept (overrides excludes). If only `exclude_keywords` match, the row is skipped. No config and no keywords → nothing is filtered.
+
+### Auto-Categorization (TNG)
+
+The provider's `matchCategory()` iterates `categories` rules. Case-insensitive, first match wins. Rules come from the merged `ProviderConfig` (global + provider-specific). Missing/invalid config file logs a warning and returns no categories.
 
 ### Environment Variables
 
-* `TNG_CATEGORIES_PATH` — path to categories JSON
+* `PROVIDER_CONFIG_PATH` — path to provider config JSON
 * `LOG_LEVEL=debug` — enables debug logging
 
 ---

@@ -13,6 +13,12 @@ type Provider interface {
 	ParsePDFText(ctx context.Context, text string) ([]models.ActualBudgetReport, error)
 }
 
+// ConfigurableProvider is an optional interface providers can implement
+// to receive runtime config updates (exclude/include keywords, category rules).
+type ConfigurableProvider interface {
+	Reload(excludeKeywords, includeKeywords []string, categories []models.CategoryRule)
+}
+
 type Registry struct {
 	providers map[string]Provider
 }

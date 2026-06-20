@@ -1,0 +1,55 @@
+{
+  "global": {
+    "exclude_keywords": [],
+    "include_keywords": [],
+    "categories": [
+      {
+        "keyword": "shopee",
+        "group": "Shopping",
+        "category": "Online"
+      }
+    ]
+  },
+  "providers": {
+    "tng": {
+      "exclude_keywords": [
+        "Quick Reload Payment",
+        "Via eWallet to GO+",
+        "Daily Interest"
+      ],
+      "include_keywords": [],
+      "categories": [
+        {
+          "keyword": "grab",
+          "group": "Food & Dining",
+          "category": "Delivery"
+        },
+        {
+          "keyword": "foodpanda",
+          "group": "Food & Dining",
+          "category": "Delivery"
+        },
+        {
+          "keyword": "ninja van",
+          "group": "Delivery",
+          "category": "Parcel"
+        },
+        {
+          "keyword": "7-eleven",
+          "group": "Food & Dining",
+          "category": "Convenience"
+        },
+        {
+          "keyword": "top up",
+          "group": "Income",
+          "category": "eWallet"
+        },
+        {
+          "keyword": "Zus Coffee",
+          "group": "",
+          "category": "Refreshment"
+        }
+      ]
+    }
+  }
+}

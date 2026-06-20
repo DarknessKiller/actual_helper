@@ -22,7 +22,7 @@ var _ = Describe("ConvertHandler", func() {
 	Describe("via HTTP", func() {
 		It("returns 400 when file is missing", func() {
 			reg := providers.NewRegistry()
-			svc := services.NewConvertService(reg)
+			svc := services.NewConvertService(reg, nil)
 			dummyHandler := handlers.NewConvertHandler(svc)
 
 			c := fuego.NewServer()
@@ -37,7 +37,7 @@ var _ = Describe("ConvertHandler", func() {
 
 		It("returns 500 for unknown provider", func() {
 			reg := providers.NewRegistry()
-			svc := services.NewConvertService(reg)
+			svc := services.NewConvertService(reg, nil)
 			dummyHandler := handlers.NewConvertHandler(svc)
 
 			s := fuego.NewServer()
@@ -61,9 +61,9 @@ var _ = Describe("ConvertHandler", func() {
 
 		It("returns CSV on successful conversion", func() {
 			reg := providers.NewRegistry()
-			reg.Register(tngprov.New())
+			reg.Register(tngprov.New(nil, nil, nil))
 
-			svc := services.NewConvertService(reg)
+			svc := services.NewConvertService(reg, nil)
 			dummyHandler := handlers.NewConvertHandler(svc)
 
 			s := fuego.NewServer()

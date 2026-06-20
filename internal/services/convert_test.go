@@ -39,7 +39,7 @@ var _ = Describe("ConvertService", func() {
 
 	BeforeEach(func() {
 		reg = providers.NewRegistry()
-		svc = services.NewConvertService(reg)
+		svc = services.NewConvertService(reg, nil)
 	})
 
 	Describe("ConvertFile", func() {
