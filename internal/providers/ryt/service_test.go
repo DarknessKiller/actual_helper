@@ -33,7 +33,9 @@ var _ = Describe("RytProvider", func() {
 				"Main Account": "Ryt Bank Checking",
 			}
 			provider := rytprov.New(nil, nil, nil, accountMappings)
-			text := `Account Transactions / Transaksi Akaun
+			text := `Main Account Statement
+
+Account Transactions / Transaksi Akaun
 Main Account / Akaun Utama
 Date
 Tarikh
@@ -60,7 +62,9 @@ Ref. ID: F20260501ABCDEF1
 
 		It("falls back to extracted account name when no mapping exists", func() {
 			provider := rytprov.New(nil, nil, nil, nil)
-			text := `Account Transactions / Transaksi Akaun
+			text := `Main Account Statement
+
+Account Transactions / Transaksi Akaun
 Main Account / Akaun Utama
 Date
 Tarikh

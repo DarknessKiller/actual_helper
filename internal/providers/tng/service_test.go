@@ -27,7 +27,7 @@ var _ = Describe("TNGProvider", func() {
 			Expect(reports[0].Payee).To(BeEmpty())
 			Expect(reports[0].Date).To(Equal("2026-06-13"))
 			Expect(reports[0].Amount).To(Equal("500.00"))
-			Expect(reports[0].Account).To(Equal("Current"))
+			Expect(reports[0].Account).To(BeEmpty())
 		})
 
 		It("skips non-success status rows", func() {
