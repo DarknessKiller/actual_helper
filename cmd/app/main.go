@@ -1,7 +1,9 @@
 package main
 
 import (
+	"fmt"
 	"log"
+	"os"
 
 	"actual-helper/internal/bootstrap"
 	"actual-helper/internal/handlers"
@@ -15,6 +17,12 @@ import (
 )
 
 func main() {
+	isProd := os.Getenv("APP_ENV") == "production"
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+
 	server := fuego.NewServer(
 		fuego.WithEngineOptions(
 			fuego.WithOpenAPIConfig(fuego.OpenAPIConfig{
@@ -23,8 +31,10 @@ func main() {
 					Description: "Converts bank/fintech transaction files (CSV or PDF) into Actual Budget-compatible CSV format.",
 					Version:     "1.0.0",
 				},
+				Disabled: isProd,
 			}),
 		),
+		fuego.WithAddr(fmt.Sprintf("localhost:%s", port)),
 	)
 
 	registry, loader := bootstrap.Init(map[string]bootstrap.ProviderFactory{
