@@ -9,7 +9,7 @@ import (
 	"actual-helper/internal/providers"
 )
 
-type ProviderFactory func(excludeKeywords, includeKeywords []string, categories []models.CategoryRule) providers.Provider
+type ProviderFactory func(excludeKeywords, includeKeywords []string, categories []models.CategoryRule, accountMappings map[string]string) providers.Provider
 
 func Init(factories map[string]ProviderFactory) (*providers.Registry, *config.Loader) {
 	configPath := os.Getenv("PROVIDER_CONFIG_PATH")
@@ -22,7 +22,7 @@ func Init(factories map[string]ProviderFactory) (*providers.Registry, *config.Lo
 
 	for name, factory := range factories {
 		pc := loader.ProviderConfig(name)
-		provider := factory(pc.ExcludeKeywords, pc.IncludeKeywords, pc.Categories)
+		provider := factory(pc.ExcludeKeywords, pc.IncludeKeywords, pc.Categories, pc.AccountMappings)
 		registry.Register(provider)
 	}
 
