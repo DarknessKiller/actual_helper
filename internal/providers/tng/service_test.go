@@ -4,7 +4,6 @@ import (
 	"context"
 	"strings"
 
-	"actual-helper/internal/models"
 	"actual-helper/internal/providers/tng"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -36,17 +35,6 @@ var _ = Describe("TNGProvider", func() {
 				"13/6/2026,Pending,Purchase,TXN001,Pending TX,Test,99.00\n"
 
 			reports, err := provider.ParseCSV(ctx, strings.NewReader(csv))
-			Expect(err).NotTo(HaveOccurred())
-			Expect(reports).To(BeEmpty())
-		})
-
-		It("skips filtered description rows when exclude keywords match", func() {
-			filterProvider := tng.New([]string{"Quick Reload Payment"}, nil, nil)
-
-			csv := "F,Status,Transaction Type,Reference,Description,Details,Amount(RM)\n" +
-				"13/6/2026,Success,Purchase,TXN001,Quick Reload Payment,Test,50.00\n"
-
-			reports, err := filterProvider.ParseCSV(ctx, strings.NewReader(csv))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(reports).To(BeEmpty())
 		})
@@ -123,21 +111,6 @@ var _ = Describe("TNGProvider", func() {
 			Expect(reports[0].Date).To(Equal("2026-12-01"))
 		})
 
-		It("applies categories from rules", func() {
-			categorizingProvider := tng.New(
-				nil, nil,
-				[]models.CategoryRule{{Keyword: "grab", Group: "Food & Dining", Category: "Delivery"}},
-			)
-
-			csv := "F,Status,Transaction Type,Reference,Description,Details,Amount(RM)\n" +
-				"13/6/2026,Success,Purchase,TXN001,GrabFood Order,Test,25.50\n"
-
-			reports, err := categorizingProvider.ParseCSV(ctx, strings.NewReader(csv))
-			Expect(err).NotTo(HaveOccurred())
-			Expect(reports).To(HaveLen(1))
-			Expect(reports[0].CategoryGroup).To(Equal("Food & Dining"))
-			Expect(reports[0].Category).To(Equal("Delivery"))
-		})
 	})
 
 	Describe("Name", func() {

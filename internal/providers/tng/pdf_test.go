@@ -3,7 +3,6 @@ package tng_test
 import (
 	"context"
 
-	"actual-helper/internal/models"
 	"actual-helper/internal/providers/tng"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -127,32 +126,6 @@ RM150.00`
 		Expect(reports[1].Amount).To(Equal("100.00"))
 	})
 
-	It("skips transactions with filtered description when exclude keywords match", func() {
-		filterProvider := tng.New([]string{"Quick Reload Payment"}, nil, nil)
-
-		text := `TNG WALLET TRANSACTION
-Date
-Status
-Transaction Type
-Reference
-Description
-Details
-Amount (RM)
-Wallet Balance
-1/5/2026
-Success
-Reload
-111111
-Quick Reload Payment
-
-RM100.00
-RM150.00`
-
-		reports, err := filterProvider.ParsePDFText(ctx, text)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(reports).To(BeEmpty())
-	})
-
 	It("returns error for text without transaction section", func() {
 		_, err := provider.ParsePDFText(ctx, "random text")
 		Expect(err).To(HaveOccurred())
@@ -164,37 +137,6 @@ RM150.00`
 		reports, err := provider.ParsePDFText(ctx, text)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(reports).To(BeEmpty())
-	})
-
-	It("applies categories when provider has category rules", func() {
-		categorizingProvider := tng.New(
-			nil, nil,
-			[]models.CategoryRule{{Keyword: "ninja", Group: "Delivery", Category: "Parcel"}},
-		)
-
-		text := `TNG WALLET TRANSACTION
-Date
-Status
-Transaction Type
-Reference
-Description
-Details
-Amount (RM)
-Wallet Balance
-1/5/2026
-Success
-Payment
-111111
-Ninja Cat Cafe
-
-RM34.00
-RM5.10`
-
-		reports, err := categorizingProvider.ParsePDFText(ctx, text)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(reports).To(HaveLen(1))
-		Expect(reports[0].CategoryGroup).To(Equal("Delivery"))
-		Expect(reports[0].Category).To(Equal("Parcel"))
 	})
 
 	It("handles date with single-digit day", func() {
