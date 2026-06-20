@@ -1,4 +1,4 @@
-package models
+package tng
 
 type TNGReport struct {
 	Date            string `csv:"F"`
