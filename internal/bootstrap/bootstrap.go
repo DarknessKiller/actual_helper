@@ -1,9 +1,6 @@
 package bootstrap
 
 import (
-	"log/slog"
-	"os"
-
 	"actual-helper/internal/config"
 	"actual-helper/internal/models"
 	"actual-helper/internal/providers"
@@ -11,14 +8,11 @@ import (
 
 type ProviderFactory func(excludeKeywords, includeKeywords []string, categories []models.CategoryRule, accountMappings map[string]string) providers.Provider
 
-func Init(factories map[string]ProviderFactory) (*providers.Registry, *config.Loader) {
-	configPath := os.Getenv("PROVIDER_CONFIG_PATH")
-	loader := config.NewLoader(configPath)
-	registry := providers.NewRegistry()
+func Init(factories map[string]ProviderFactory) (*providers.Registry, *config.Loader, config.Env) {
 
-	if configPath == "" {
-		slog.Warn("PROVIDER_CONFIG_PATH not set, running without filters or categories")
-	}
+	env := config.LoadEnv()
+	loader := config.NewLoader(env.ProviderConfigPath)
+	registry := providers.NewRegistry()
 
 	for name, factory := range factories {
 		pc := loader.ProviderConfig(name)
@@ -26,5 +20,5 @@ func Init(factories map[string]ProviderFactory) (*providers.Registry, *config.Lo
 		registry.Register(provider)
 	}
 
-	return registry, loader
+	return registry, loader, env
 }
