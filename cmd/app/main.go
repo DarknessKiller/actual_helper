@@ -18,7 +18,7 @@ func main() {
 		fuego.WithEngineOptions(
 			fuego.WithOpenAPIConfig(fuego.OpenAPIConfig{
 				Info: &openapi3.Info{
-					Title:       "Actual Helper API",
+					Title:       "Actual Helper",
 					Description: "Converts bank/fintech transaction files (CSV or PDF) into Actual Budget-compatible CSV format.",
 					Version:     "1.0.0",
 				},

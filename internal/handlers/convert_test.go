@@ -25,12 +25,12 @@ type mockProvider struct {
 }
 
 func (m *mockProvider) Name() string { return m.name }
-func (m *mockProvider) ParseCSV(_ context.Context, _ io.Reader) ([]models.ActualBudgetReport, error) {
+func (m *mockProvider) ParseCSV(context.Context, io.Reader) ([]models.ActualBudgetReport, error) {
 	return []models.ActualBudgetReport{
 		{Account: "Current", Date: "2026-06-13", Payee: "", Notes: "Top Up", Amount: "500.00"},
 	}, nil
 }
-func (m *mockProvider) ParsePDFText(_ context.Context, _ string) ([]models.ActualBudgetReport, error) {
+func (m *mockProvider) ParsePDFText(context.Context, string) ([]models.ActualBudgetReport, error) {
 	return nil, nil
 }
 
