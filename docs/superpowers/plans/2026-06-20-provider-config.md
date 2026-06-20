@@ -1,6 +1,8 @@
+> **Status: COMPLETED** — All tasks implemented. See `2026-06-20-provider-config-design.md` for the design.
+
 # Provider Config System Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Replace hardcoded TNG description filters and TNG-specific categories with a shared `internal/config` package that provides a single JSON config file with global + per-provider sections.
 
@@ -28,7 +30,7 @@
 **Interfaces:**
 - Produces: `type Config struct`, `type Loader struct`, `func NewLoader(path string) *Loader`, `func (l *Loader) ensureLoaded()`
 
-- [ ] **Step 1: Create directory and test suite file**
+- [x] **Step 1: Create directory and test suite file**
 
 ```go
 // internal/config/config_suite_test.go
@@ -47,7 +49,7 @@ func TestConfig(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Create `internal/config/config.go` with data types**
+- [x] **Step 2: Create `internal/config/config.go` with data types**
 
 ```go
 package config
@@ -181,7 +183,7 @@ func (l *Loader) Match(providerName, description string) (group, category string
 }
 ```
 
-- [ ] **Step 3: Write failing tests**
+- [x] **Step 3: Write failing tests**
 
 ```go
 // internal/config/config_test.go
@@ -390,12 +392,12 @@ var _ = Describe("Config", func() {
 })
 ```
 
-- [ ] **Step 4: Run tests**
+- [x] **Step 4: Run tests**
 
 Run: `cd $WORKDIR && go test ./internal/config/ -v`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add internal/config/config.go internal/config/config_test.go internal/config/config_suite_test.go
@@ -413,21 +415,21 @@ git commit -m "feat(config): add shared provider config with Loader, ShouldSkip,
 - Remove: `internal/providers/tng/categories.go`
 - Remove: `internal/providers/tng/categories_test.go`
 
-- [ ] **Step 1: Read current service.go**
+- [x] **Step 1: Read current service.go**
 
-- [ ] **Step 2: Update TNGProvider struct and constructor**
+- [x] **Step 2: Update TNGProvider struct and constructor**
 
-- [ ] **Step 3: Replace hardcoded filters with loader.ShouldSkip**
+- [x] **Step 3: Replace hardcoded filters with loader.ShouldSkip**
 
-- [ ] **Step 4: Replace categories logic with loader.Match**
+- [x] **Step 4: Replace categories logic with loader.Match**
 
-- [ ] **Step 5: Remove categories.go and categories_test.go**
+- [x] **Step 5: Remove categories.go and categories_test.go**
 
-- [ ] **Step 6: Update tests (constructor calls)**
+- [x] **Step 6: Update tests (constructor calls)**
 
-- [ ] **Step 7: Run all tests**
+- [x] **Step 7: Run all tests**
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ---
 
@@ -437,12 +439,12 @@ git commit -m "feat(config): add shared provider config with Loader, ShouldSkip,
 - Modify: `cmd/app/main.go`
 - Create: `provider_config.example.json`
 
-- [ ] **Step 1: Read current main.go**
+- [x] **Step 1: Read current main.go**
 
-- [ ] **Step 2: Update main.go with config.Loader**
+- [x] **Step 2: Update main.go with config.Loader**
 
-- [ ] **Step 3: Create example config**
+- [x] **Step 3: Create example config**
 
-- [ ] **Step 4: Build and test**
+- [x] **Step 4: Build and test**
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**

@@ -1,3 +1,7 @@
+> **SUPERSEDED** — This design was replaced by the shared provider config system.
+> See [provider-config-design.md](2026-06-20-provider-config-design.md) for the current approach.
+>
+
 # TNG Auto-Categorization Design
 
 ## Problem

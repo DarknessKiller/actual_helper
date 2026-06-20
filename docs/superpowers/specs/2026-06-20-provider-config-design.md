@@ -93,6 +93,7 @@ service.ConvertFile()
 |---|---|
 | `internal/models/rule.go` | **New** — `CategoryRule` shared type |
 | `internal/config/config.go` | **New** — `Config`, `ProviderConfig`, `Loader` with hot-reload via mtime |
+| `internal/rule/engine.go` | **New** — shared filtering/categorization engine |
 | `internal/config/config_test.go` | **New** — loader, merge, hot-reload tests |
 | `internal/bootstrap/bootstrap.go` | **New** — creates loader, extracts merged rules, creates providers |
 | `internal/providers/provider.go` | **Modify** — added `ConfigurableProvider` interface |
