@@ -1,5 +1,7 @@
 # Ryt Bank Provider Implementation Plan
 
+> **Status: COMPLETED** — All tasks implemented, tested, and deployed. See `2026-06-20-ryt-bank-provider-design.md` for the design.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) for syntax tracking.
 
 **Goal:** Add a new `ryt` provider that parses Ryt Bank PDF statements into Actual Budget-compatible CSV.
