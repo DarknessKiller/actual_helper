@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 
 	"actual-helper/internal/bootstrap"
@@ -15,6 +16,12 @@ import (
 )
 
 func main() {
+
+	registry, loader, env := bootstrap.Init(map[string]bootstrap.ProviderFactory{
+		"tng": tngprov.New,
+		"ryt": rytprov.New,
+	})
+
 	server := fuego.NewServer(
 		fuego.WithEngineOptions(
 			fuego.WithOpenAPIConfig(fuego.OpenAPIConfig{
@@ -25,12 +32,8 @@ func main() {
 				},
 			}),
 		),
+		fuego.WithAddr(fmt.Sprintf("0.0.0.0:%d", env.Port)),
 	)
-
-	registry, loader := bootstrap.Init(map[string]bootstrap.ProviderFactory{
-		"tng": tngprov.New,
-		"ryt": rytprov.New,
-	})
 
 	convertService := services.NewConvertService(registry, loader)
 	handler := handlers.NewConvertHandler(convertService)
