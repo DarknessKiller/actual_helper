@@ -15,8 +15,8 @@
       "account_mappings": {
         "": "Current"
       },
-      "exclude_keywords": ["Quick Reload Payment", "Via eWallet to GO+"],
-      "include_keywords": ["Daily Interest"],
+      "exclude_keywords": ["Quick Reload Payment", "Via eWallet to GO+", "Daily Interest"],
+      "include_keywords": [],
       "categories": [
         {
           "keyword": "grab",
