@@ -2,13 +2,15 @@ package handlers_test
 
 import (
 	"bytes"
+	"context"
+	"io"
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 
 	"actual-helper/internal/handlers"
+	"actual-helper/internal/models"
 	"actual-helper/internal/providers"
-	tngprov "actual-helper/internal/providers/tng"
 	"actual-helper/internal/services"
 
 	"github.com/go-fuego/fuego"
@@ -18,24 +20,39 @@ import (
 	. "github.com/onsi/gomega"
 )
 
+type mockProvider struct {
+	name string
+}
+
+func (m *mockProvider) Name() string { return m.name }
+func (m *mockProvider) ParseCSV(_ context.Context, _ io.Reader) ([]models.ActualBudgetReport, error) {
+	return []models.ActualBudgetReport{
+		{Account: "Current", Date: "2026-06-13", Payee: "", Notes: "Top Up", Amount: "500.00"},
+	}, nil
+}
+func (m *mockProvider) ParsePDFText(_ context.Context, _ string) ([]models.ActualBudgetReport, error) {
+	return nil, nil
+}
+
 var _ = Describe("ConvertHandler", func() {
 	Describe("via HTTP", func() {
 		It("returns 400 when file is missing", func() {
 			reg := providers.NewRegistry()
+			reg.Register(&mockProvider{name: "test"})
 			svc := services.NewConvertService(reg, nil)
 			dummyHandler := handlers.NewConvertHandler(svc)
 
 			c := fuego.NewServer()
 			handlers.RegisterConvertRoutes(c, dummyHandler)
 
-			req := httptest.NewRequest("POST", "/convert/tng", nil)
+			req := httptest.NewRequest("POST", "/convert/test", nil)
 			w := httptest.NewRecorder()
 			c.Mux.ServeHTTP(w, req)
 
 			Expect(w.Code).To(Equal(http.StatusBadRequest))
 		})
 
-		It("returns 500 for unknown provider", func() {
+		It("returns 500 for unregistered provider", func() {
 			reg := providers.NewRegistry()
 			svc := services.NewConvertService(reg, nil)
 			dummyHandler := handlers.NewConvertHandler(svc)
@@ -51,7 +68,7 @@ var _ = Describe("ConvertHandler", func() {
 			fw.Write([]byte("a,b,c"))
 			w.Close()
 
-			req := httptest.NewRequest("POST", "/convert/tng", &buf)
+			req := httptest.NewRequest("POST", "/convert/unknown", &buf)
 			req.Header.Set("Content-Type", w.FormDataContentType())
 			rr := httptest.NewRecorder()
 			s.Mux.ServeHTTP(rr, req)
@@ -61,7 +78,7 @@ var _ = Describe("ConvertHandler", func() {
 
 		It("returns CSV on successful conversion", func() {
 			reg := providers.NewRegistry()
-			reg.Register(tngprov.New(nil, nil, nil))
+			reg.Register(&mockProvider{name: "test"})
 
 			svc := services.NewConvertService(reg, nil)
 			dummyHandler := handlers.NewConvertHandler(svc)
@@ -74,10 +91,10 @@ var _ = Describe("ConvertHandler", func() {
 			var buf bytes.Buffer
 			w := multipart.NewWriter(&buf)
 			fw, _ := w.CreateFormFile("file", "test.csv")
-			fw.Write([]byte("F,Status,Transaction Type,Reference,Description,Details,Amount(RM)\n13/6/2026,Success,Reload,TXN001,Top Up,Test,500.00"))
+			fw.Write([]byte("dummy,csv,data"))
 			w.Close()
 
-			req := httptest.NewRequest("POST", "/convert/tng", &buf)
+			req := httptest.NewRequest("POST", "/convert/test", &buf)
 			req.Header.Set("Content-Type", w.FormDataContentType())
 			rr := httptest.NewRecorder()
 			s.Mux.ServeHTTP(rr, req)
