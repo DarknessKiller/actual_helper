@@ -10,10 +10,10 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"actual-helper/internal/models"
+	"actual-helper/internal/rule"
 )
 
 type TNGTransactionType string
@@ -37,73 +37,25 @@ var creditTransactionTypes = map[TNGTransactionType]struct{}{
 }
 
 type TNGProvider struct {
-	excludeKeywords []string
-	includeKeywords []string
-	categories      []models.CategoryRule
-	mu              sync.RWMutex
+	engine *rule.Engine
 }
 
 func New(excludeKeywords, includeKeywords []string, categories []models.CategoryRule) *TNGProvider {
-	eks := make([]string, len(excludeKeywords))
-	copy(eks, excludeKeywords)
-	iks := make([]string, len(includeKeywords))
-	copy(iks, includeKeywords)
-	cats := make([]models.CategoryRule, len(categories))
-	copy(cats, categories)
-
 	return &TNGProvider{
-		excludeKeywords: eks,
-		includeKeywords: iks,
-		categories:      cats,
+		engine: rule.NewEngine(excludeKeywords, includeKeywords, categories),
 	}
 }
 
 func (p *TNGProvider) Reload(excludeKeywords, includeKeywords []string, categories []models.CategoryRule) {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-
-	p.excludeKeywords = make([]string, len(excludeKeywords))
-	copy(p.excludeKeywords, excludeKeywords)
-	p.includeKeywords = make([]string, len(includeKeywords))
-	copy(p.includeKeywords, includeKeywords)
-	p.categories = make([]models.CategoryRule, len(categories))
-	copy(p.categories, categories)
+	p.engine.Reload(excludeKeywords, includeKeywords, categories)
 }
 
 func (p *TNGProvider) shouldSkip(description string) bool {
-	p.mu.RLock()
-	defer p.mu.RUnlock()
-
-	lower := strings.ToLower(description)
-
-	for _, kw := range p.includeKeywords {
-		if strings.Contains(lower, strings.ToLower(kw)) {
-			return false
-		}
-	}
-
-	for _, kw := range p.excludeKeywords {
-		if strings.Contains(lower, strings.ToLower(kw)) {
-			return true
-		}
-	}
-
-	return false
+	return p.engine.ShouldSkip(description)
 }
 
 func (p *TNGProvider) matchCategory(description string) (string, string) {
-	p.mu.RLock()
-	defer p.mu.RUnlock()
-
-	lower := strings.ToLower(description)
-
-	for _, r := range p.categories {
-		if strings.Contains(lower, strings.ToLower(r.Keyword)) {
-			return r.Group, r.Category
-		}
-	}
-
-	return "", ""
+	return p.engine.MatchCategory(description)
 }
 
 func (p *TNGProvider) Name() string {
