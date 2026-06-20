@@ -6,6 +6,7 @@ import (
 )
 
 type Env struct {
+	PublicURL          string
 	Port               int
 	ProviderConfigPath string
 	Environment        string
@@ -13,6 +14,7 @@ type Env struct {
 
 func LoadEnv() Env {
 	return Env{
+		PublicURL:          getString("PUBLIC_URL", ""),
 		Port:               getInt("PORT", 8080),
 		ProviderConfigPath: getString("PROVIDER_CONFIG_PATH", "provider_config.example.json"),
 		Environment:        getString("APP_ENV", "development"),
