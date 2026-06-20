@@ -30,6 +30,7 @@ func main() {
 					Description: "Converts bank/fintech transaction files (CSV or PDF) into Actual Budget-compatible CSV format.",
 					Version:     "1.0.0",
 				},
+				DisableDefaultServer: env.Environment == "production",
 			}),
 		),
 		fuego.WithAddr(fmt.Sprintf("0.0.0.0:%d", env.Port)),
