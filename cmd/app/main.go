@@ -3,9 +3,8 @@ package main
 import (
 	"log"
 
+	"actual-helper/internal/bootstrap"
 	"actual-helper/internal/handlers"
-	"actual-helper/internal/providers"
-	tngprov "actual-helper/internal/providers/tng"
 	"actual-helper/internal/services"
 
 	"github.com/go-fuego/fuego"
@@ -14,10 +13,9 @@ import (
 func main() {
 	server := fuego.NewServer()
 
-	registry := providers.NewRegistry()
-	registry.Register(tngprov.New())
+	registry, loader := bootstrap.Init()
 
-	convertService := services.NewConvertService(registry)
+	convertService := services.NewConvertService(registry, loader)
 	handler := handlers.NewConvertHandler(convertService)
 	handlers.RegisterConvertRoutes(server, handler)
 

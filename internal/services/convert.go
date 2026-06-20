@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"strings"
 
+	"actual-helper/internal/config"
 	"actual-helper/internal/models"
 	"actual-helper/internal/pdfutil"
 	"actual-helper/internal/providers"
@@ -15,10 +16,11 @@ import (
 
 type ConvertService struct {
 	registry *providers.Registry
+	loader   *config.Loader
 }
 
-func NewConvertService(registry *providers.Registry) *ConvertService {
-	return &ConvertService{registry: registry}
+func NewConvertService(registry *providers.Registry, loader *config.Loader) *ConvertService {
+	return &ConvertService{registry: registry, loader: loader}
 }
 
 func (service *ConvertService) ConvertFile(ctx context.Context, providerName string, file io.Reader, filename, contentType, password string) ([]byte, error) {
@@ -28,6 +30,8 @@ func (service *ConvertService) ConvertFile(ctx context.Context, providerName str
 	if !ok {
 		return nil, fmt.Errorf("provider %q not found", providerName)
 	}
+
+	service.reloadProvider(providerName, provider)
 
 	var reports []models.ActualBudgetReport
 	var err error
@@ -60,4 +64,14 @@ func (service *ConvertService) ConvertFile(ctx context.Context, providerName str
 
 	logger.InfoContext(ctx, "csv conversion complete", "bytes", len(csvData))
 	return csvData, nil
+}
+
+func (service *ConvertService) reloadProvider(name string, provider providers.Provider) {
+	if service.loader == nil {
+		return
+	}
+	pc := service.loader.ProviderConfig(name)
+	if cp, ok := provider.(providers.ConfigurableProvider); ok {
+		cp.Reload(pc.ExcludeKeywords, pc.IncludeKeywords, pc.Categories)
+	}
 }
