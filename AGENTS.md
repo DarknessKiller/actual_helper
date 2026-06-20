@@ -162,9 +162,9 @@ Missing or invalid config — the loader logs a warning and returns empty rules 
 
 Providers use `shouldSkip()` via `rule.Engine`. When `include_keywords` are configured (merged from global + provider config), they act as a **whitelist**: only rows matching any include keyword pass through; everything else is skipped. When `include_keywords` is empty, exclude-only filtering applies (matching `exclude_keywords` are skipped). No config and no keywords → nothing is filtered.
 
-### Auto-Categorization (TNG)
+### Auto-Categorization
 
-The provider's `matchCategory()` iterates `categories` rules. Case-insensitive, first match wins. Rules come from the merged `ProviderConfig` (global + provider-specific). Missing/invalid config file logs a warning and returns no categories.
+Providers use `matchCategory()` via `rule.Engine`. Case-insensitive, first match wins. Rules come from the merged `ProviderConfig` (global + provider-specific). Missing/invalid config file logs a warning and returns no categories.
 
 ### Environment Variables
 
