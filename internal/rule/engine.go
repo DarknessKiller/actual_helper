@@ -36,11 +36,15 @@ func (e *Engine) ShouldSkip(description string) bool {
 
 	lower := strings.ToLower(description)
 
-	for _, kw := range e.includeKeywords {
-		if strings.Contains(lower, strings.ToLower(kw)) {
-			return false
+	if len(e.includeKeywords) > 0 {
+		for _, kw := range e.includeKeywords {
+			if strings.Contains(lower, strings.ToLower(kw)) {
+				return false
+			}
 		}
+		return true
 	}
+
 	for _, kw := range e.excludeKeywords {
 		if strings.Contains(lower, strings.ToLower(kw)) {
 			return true

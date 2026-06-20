@@ -20,7 +20,7 @@ var _ = Describe("Engine", func() {
 			Expect(e.ShouldSkip("GrabFood Order")).To(BeFalse())
 		})
 
-		It("include keyword overrides exclude", func() {
+		It("include keyword whitelist keeps matching row despite matching exclude", func() {
 			e := rule.NewEngine(
 				[]string{"Daily Interest"},
 				[]string{"Daily Interest"},
@@ -37,6 +37,40 @@ var _ = Describe("Engine", func() {
 		It("returns false for nil keywords", func() {
 			e := rule.NewEngine(nil, nil, nil)
 			Expect(e.ShouldSkip("anything")).To(BeFalse())
+		})
+
+		It("include keyword whitelist keeps matching rows", func() {
+			e := rule.NewEngine(nil, []string{"Grab"}, nil)
+			Expect(e.ShouldSkip("GrabFood Order")).To(BeFalse())
+		})
+
+		It("include keyword whitelist skips non-matching rows", func() {
+			e := rule.NewEngine(nil, []string{"Grab"}, nil)
+			Expect(e.ShouldSkip("Shopee Order")).To(BeTrue())
+		})
+
+		It("include keyword overrides exclude in whitelist mode", func() {
+			e := rule.NewEngine(
+				[]string{"Grab"},
+				[]string{"Grab"},
+				nil,
+			)
+			Expect(e.ShouldSkip("GrabFood Order")).To(BeFalse())
+		})
+
+		It("include keyword skips non-matching even when exclude would match", func() {
+			e := rule.NewEngine(
+				[]string{"Shopee"},
+				[]string{"Grab"},
+				nil,
+			)
+			Expect(e.ShouldSkip("Shopee Order")).To(BeTrue())
+		})
+
+		It("empty include slice falls back to exclude logic", func() {
+			e := rule.NewEngine([]string{"Grab"}, []string{}, nil)
+			Expect(e.ShouldSkip("GrabFood Order")).To(BeTrue())
+			Expect(e.ShouldSkip("Shopee Order")).To(BeFalse())
 		})
 	})
 
