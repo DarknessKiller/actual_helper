@@ -146,7 +146,7 @@ Format:
 }
 ```
 
-`include_keywords` overrides `exclude_keywords`: if a description matches any include keyword, it is kept even if an exclude keyword also matches.
+`include_keywords` act as a whitelist when configured: only rows matching any include keyword pass through; everything else is skipped. When `include_keywords` is empty, exclude-only filtering applies.
 
 ### Hot-Reload
 
@@ -158,9 +158,9 @@ Missing or invalid config — the loader logs a warning and returns empty rules 
 
 `toActualReports()` is a shared mapper used by both `ParseCSV` and `ParsePDFText`. It handles filtering (non-Success status, filtered descriptions via `shouldSkip`), date parsing, credit/debit sign, categorization (via `matchCategory`), and `ActualBudgetReport` construction.
 
-### Filtering Rules (TNG)
+### Filtering Rules
 
-The provider's `shouldSkip()` checks `exclude_keywords` and `include_keywords` on each description. If any `include_keyword` matches, the row is kept (overrides excludes). If only `exclude_keywords` match, the row is skipped. No config and no keywords → nothing is filtered.
+Providers use `shouldSkip()` via `rule.Engine`. When `include_keywords` are configured (merged from global + provider config), they act as a **whitelist**: only rows matching any include keyword pass through; everything else is skipped. When `include_keywords` is empty, exclude-only filtering applies (matching `exclude_keywords` are skipped). No config and no keywords → nothing is filtered.
 
 ### Auto-Categorization (TNG)
 
