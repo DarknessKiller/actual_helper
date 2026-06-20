@@ -3,12 +3,20 @@ package handlers
 import (
 	"fmt"
 	"log/slog"
+	"time"
 
 	"actual-helper/internal/services"
 
 	"github.com/go-fuego/fuego"
 	"github.com/go-fuego/fuego/option"
 )
+
+type ConvertRequestBody struct {
+	File     []byte `json:"file" description:"Transaction file (CSV or encrypted PDF)"`
+	Password string `json:"password,omitempty" description:"PDF decryption password (optional)"`
+}
+
+type ConvertResponseBody struct{}
 
 type ConvertHandler struct {
 	convertService *services.ConvertService
@@ -18,10 +26,17 @@ func NewConvertHandler(convertService *services.ConvertService) *ConvertHandler 
 	return &ConvertHandler{convertService: convertService}
 }
 
-func (handler *ConvertHandler) Convert(c fuego.ContextNoBody) (any, error) {
+func (handler *ConvertHandler) Convert(c fuego.ContextWithBody[ConvertRequestBody]) (any, error) {
 	providerName := c.PathParam("provider")
 
 	if err := c.Request().ParseMultipartForm(10 << 20); err != nil {
+		return nil, fuego.BadRequestError{Title: "Invalid form", Detail: err.Error()}
+	}
+
+	c.Request().Header.Set("Content-Type", "multipart/form-data")
+
+	body, err := c.Body()
+	if err != nil {
 		return nil, fuego.BadRequestError{Title: "Invalid form", Detail: err.Error()}
 	}
 
@@ -36,7 +51,7 @@ func (handler *ConvertHandler) Convert(c fuego.ContextNoBody) (any, error) {
 
 	slog.Info("request received", "provider", providerName, "filename", filename, "size", header.Size)
 
-	csvBytes, err := handler.convertService.ConvertFile(c.Context(), providerName, file, filename, contentType, c.Request().FormValue("password"))
+	csvBytes, err := handler.convertService.ConvertFile(c.Context(), providerName, file, filename, contentType, body.Password)
 	if err != nil {
 		return nil, fuego.InternalServerError{Title: "Conversion failed", Detail: err.Error()}
 	}
@@ -57,5 +72,10 @@ func RegisterConvertRoutes(server *fuego.Server, convertHandler *ConvertHandler)
 		option.Summary("Convert provider transaction file to Actual Budget CSV"),
 		option.Description("Upload a CSV or encrypted PDF transaction file from a supported provider and get back an Actual Budget compatible CSV."),
 		option.Tags("convert"),
+		option.RequestContentType("multipart/form-data"),
+		option.AddResponse(200, "Successful conversion — returns a CSV file ready for Actual Budget import", fuego.Response{
+			ContentTypes: []string{"text/csv"},
+			Type:         ConvertResponseBody{},
+		}),
 	)
 }
