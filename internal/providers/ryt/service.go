@@ -97,15 +97,14 @@ func (p *RytProvider) toActualReports(ctx context.Context, logger *slog.Logger, 
 
 		categoryGroup, category := p.matchCategory(description)
 
-		account := accountName
 		if p.accountMapping != nil {
 			if mapped, ok := p.accountMapping[accountName]; ok {
-				account = mapped
+				accountName = mapped
 			}
 		}
 
 		result = append(result, models.ActualBudgetReport{
-			Account:       account,
+			Account:       accountName,
 			Date:          parsedDate.Format("2006-01-02"),
 			Payee:         "",
 			Notes:         description,

@@ -12,6 +12,9 @@
   },
   "providers": {
     "tng": {
+      "account_mappings": {
+        "": "Current"
+      },
       "exclude_keywords": [
         "Quick Reload Payment",
         "Via eWallet to GO+",
@@ -50,6 +53,11 @@
           "category": "Refreshment"
         }
       ]
+    },
+    "ryt": {
+      "account_mappings": {
+        "Savings Account": "Current"
+      }
     }
   }
 }
