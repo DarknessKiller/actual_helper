@@ -181,6 +181,10 @@ Use:
 * Gomega
 * httptest
 
+### Data Privacy
+
+All test data MUST use fake/anonymized data — no real names, reference IDs, account numbers, or other personal information. Real personal data should never be committed to the repository.
+
 Every implementation should include tests for:
 
 ### Success Paths
