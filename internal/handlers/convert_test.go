@@ -101,6 +101,7 @@ var _ = Describe("ConvertHandler", func() {
 
 			Expect(rr.Code).To(Equal(http.StatusOK))
 			Expect(rr.Header().Get("Content-Type")).To(Equal("text/csv"))
+			Expect(rr.Header().Get("Content-Disposition")).To(MatchRegexp(`attachment; filename=".*\.csv"`))
 			Expect(rr.Body.String()).To(ContainSubstring("Account,Date,Payee"))
 			Expect(rr.Body.String()).To(ContainSubstring("Top Up"))
 		})
