@@ -1,6 +1,7 @@
 package main
 
 import (
+	"io/fs"
 	"log"
 
 	"actual_helper/internal/bootstrap"
@@ -10,6 +11,7 @@ import (
 	tngprov "actual_helper/internal/providers/tng"
 	"actual_helper/internal/ratelimit"
 	"actual_helper/internal/services"
+	"actual_helper/frontend"
 
 	"github.com/go-fuego/fuego"
 )
@@ -26,7 +28,12 @@ func main() {
 	handler := handlers.NewConvertHandler(convertService)
 	fuego.Use(server, ratelimit.Middleware)
 	handlers.RegisterConvertRoutes(server, handler)
-	handlers.RegisterFrontendRoutes(server.Mux, nil)
+
+	dist, err := fs.Sub(frontend.FS, "dist")
+	if err != nil {
+		log.Fatal(err)
+	}
+	handlers.RegisterFrontendRoutes(server.Mux, dist)
 
 	if err := server.Run(); err != nil {
 		log.Fatal(err)
