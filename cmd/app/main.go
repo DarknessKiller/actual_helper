@@ -31,7 +31,7 @@ func main() {
 
 	dist, err := fs.Sub(frontend.FS, "dist")
 	if err != nil {
-		log.Fatal(err)
+		dist = nil
 	}
 	handlers.RegisterFrontendRoutes(server.Mux, dist)
 
