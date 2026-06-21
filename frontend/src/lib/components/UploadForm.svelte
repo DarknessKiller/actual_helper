@@ -147,10 +147,10 @@
         onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') document.getElementById('file-upload')?.click() }}
       >
         {#if file}
-          <div class="flex items-center gap-3">
+          <div class="flex items-center gap-3 w-full min-w-0">
             <span class="text-3xl">{isPDF(file) ? '📄' : '📋'}</span>
-            <div>
-              <p class="font-medium">{file.name}</p>
+            <div class="min-w-0 flex-1">
+              <p class="font-medium truncate">{file.name}</p>
               <p class="text-sm text-base-content/50">{(file.size / 1024).toFixed(1)} KB</p>
             </div>
             <button

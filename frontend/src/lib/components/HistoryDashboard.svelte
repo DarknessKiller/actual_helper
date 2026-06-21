@@ -88,9 +88,9 @@
             class="flex items-center justify-between p-3 rounded-lg bg-base-200/50 hover:bg-base-200 transition-colors"
             in:slide={{ duration: 300 }}
           >
-            <div class="flex items-center gap-3 min-w-0">
+            <div class="flex items-center gap-3 min-w-0 flex-1">
               <span class="badge badge-outline badge-sm">{conversion.provider.toUpperCase()}</span>
-              <div class="min-w-0">
+              <div class="min-w-0 flex-1">
                 <p class="text-sm font-medium truncate">{conversion.filename}</p>
                 <p class="text-xs text-base-content/40">{formatDate(conversion.timestamp)}</p>
               </div>
