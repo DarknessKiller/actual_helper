@@ -26,6 +26,7 @@ func main() {
 	handler := handlers.NewConvertHandler(convertService)
 	fuego.Use(server, ratelimit.Middleware)
 	handlers.RegisterConvertRoutes(server, handler)
+	handlers.RegisterFrontendRoutes(server.Mux, nil)
 
 	if err := server.Run(); err != nil {
 		log.Fatal(err)
