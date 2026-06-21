@@ -8,10 +8,10 @@ import (
 	"net/http"
 	"net/http/httptest"
 
-	"actual-helper/internal/handlers"
-	"actual-helper/internal/models"
-	"actual-helper/internal/providers"
-	"actual-helper/internal/services"
+	"actual_helper/internal/handlers"
+	"actual_helper/internal/models"
+	"actual_helper/internal/providers"
+	"actual_helper/internal/services"
 
 	"github.com/go-fuego/fuego"
 	"github.com/go-fuego/fuego/option"
@@ -101,6 +101,7 @@ var _ = Describe("ConvertHandler", func() {
 
 			Expect(rr.Code).To(Equal(http.StatusOK))
 			Expect(rr.Header().Get("Content-Type")).To(Equal("text/csv"))
+			Expect(rr.Header().Get("Content-Disposition")).To(MatchRegexp(`attachment; filename=".*\.csv"`))
 			Expect(rr.Body.String()).To(ContainSubstring("Account,Date,Payee"))
 			Expect(rr.Body.String()).To(ContainSubstring("Top Up"))
 		})

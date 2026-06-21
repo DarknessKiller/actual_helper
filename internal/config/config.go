@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"actual-helper/internal/models"
+	"actual_helper/internal/models"
 )
 
 type ProviderConfig struct {

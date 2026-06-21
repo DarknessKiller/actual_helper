@@ -1,9 +1,9 @@
 package bootstrap
 
 import (
-	"actual-helper/internal/config"
-	"actual-helper/internal/models"
-	"actual-helper/internal/providers"
+	"actual_helper/internal/config"
+	"actual_helper/internal/models"
+	"actual_helper/internal/providers"
 )
 
 type ProviderFactory func(excludeKeywords, includeKeywords []string, categories []models.CategoryRule, accountMappings map[string]string) providers.Provider

@@ -6,9 +6,9 @@ import (
 	"io"
 	"strings"
 
-	"actual-helper/internal/models"
-	"actual-helper/internal/providers"
-	"actual-helper/internal/services"
+	"actual_helper/internal/models"
+	"actual_helper/internal/providers"
+	"actual_helper/internal/services"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"

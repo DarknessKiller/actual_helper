@@ -8,10 +8,10 @@ import (
 	"log/slog"
 	"strings"
 
-	"actual-helper/internal/config"
-	"actual-helper/internal/models"
-	"actual-helper/internal/pdfutil"
-	"actual-helper/internal/providers"
+	"actual_helper/internal/config"
+	"actual_helper/internal/models"
+	"actual_helper/internal/pdfutil"
+	"actual_helper/internal/providers"
 )
 
 type ConvertService struct {

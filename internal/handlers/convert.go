@@ -5,7 +5,7 @@ import (
 	"log/slog"
 	"time"
 
-	"actual-helper/internal/services"
+	"actual_helper/internal/services"
 
 	"github.com/go-fuego/fuego"
 	"github.com/go-fuego/fuego/option"
@@ -30,9 +30,11 @@ func NewConvertHandler(convertService *services.ConvertService) *ConvertHandler 
 func (handler *ConvertHandler) Convert(c fuego.ContextWithBody[ConvertRequestBody]) (any, error) {
 	providerName := c.PathParam("provider")
 
-	if err := c.Request().ParseMultipartForm(10 << 20); err != nil {
-		return nil, fuego.BadRequestError{Title: "Invalid form", Detail: err.Error()}
+	file, header, err := c.Request().FormFile("file")
+	if err != nil {
+		return nil, fuego.BadRequestError{Title: "File required", Detail: err.Error()}
 	}
+	defer file.Close()
 
 	c.Request().Header.Set("Content-Type", "multipart/form-data")
 
@@ -40,12 +42,6 @@ func (handler *ConvertHandler) Convert(c fuego.ContextWithBody[ConvertRequestBod
 	if err != nil {
 		return nil, fuego.BadRequestError{Title: "Invalid form", Detail: err.Error()}
 	}
-
-	file, header, err := c.Request().FormFile("file")
-	if err != nil {
-		return nil, fuego.BadRequestError{Title: "File required", Detail: err.Error()}
-	}
-	defer file.Close()
 
 	filename := header.Filename
 	contentType := header.Header.Get("Content-Type")
@@ -58,10 +54,10 @@ func (handler *ConvertHandler) Convert(c fuego.ContextWithBody[ConvertRequestBod
 	}
 
 	currentTime := time.Now()
-	fileName := fmt.Sprintf("%s_actual_budget_%s.csv", providerName, currentTime.Local().Format(time.RFC3339))
+	fileName := fmt.Sprintf("%s_actual_budget_%s.csv", providerName, currentTime.Local().Format("2006-01-02_150405"))
 
 	c.Response().Header().Set("Content-Type", "text/csv")
-	c.Response().Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s", fileName))
+	c.Response().Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, fileName))
 	c.Response().Write(csvBytes)
 
 	slog.Info("response sent", "provider", providerName, "bytes", len(csvBytes))

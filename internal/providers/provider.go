@@ -4,7 +4,7 @@ import (
 	"context"
 	"io"
 
-	"actual-helper/internal/models"
+	"actual_helper/internal/models"
 )
 
 type Provider interface {
