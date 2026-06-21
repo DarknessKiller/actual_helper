@@ -2,6 +2,7 @@
 FROM golang:1.26-alpine AS builder
 WORKDIR /app
 ARG VERSION
+ARG PORT=8080
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
@@ -15,5 +16,5 @@ WORKDIR /app
 COPY --from=builder /app/actual_helper actual_helper
 COPY --from=builder /app/provider_config.json provider_config.json
 ENV PROVIDER_CONFIG_PATH=/app/provider_config.json
-EXPOSE 8080
+EXPOSE $PORT
 CMD ["/app/actual_helper"]
