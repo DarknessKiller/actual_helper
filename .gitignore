@@ -6,3 +6,8 @@
 __debug_bin*
 doc/openapi.json
 cmd/app/doc/openapi.json
+
+app.exe
+
+frontend/dist/
+frontend/node_modules/

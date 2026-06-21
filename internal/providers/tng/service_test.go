@@ -4,7 +4,7 @@ import (
 	"context"
 	"strings"
 
-	"actual-helper/internal/providers/tng"
+	"actual_helper/internal/providers/tng"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"

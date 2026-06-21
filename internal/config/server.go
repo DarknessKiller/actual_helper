@@ -8,6 +8,13 @@ import (
 )
 
 func NewFuegoServer(env Env) *fuego.Server {
+	isProd := env.Environment == "production"
+
+	host := "localhost"
+	if isProd {
+		host = "0.0.0.0"
+	}
+
 	server := fuego.NewServer(
 		fuego.WithEngineOptions(
 			fuego.WithOpenAPIConfig(fuego.OpenAPIConfig{
@@ -16,13 +23,13 @@ func NewFuegoServer(env Env) *fuego.Server {
 					Description: "Converts bank/fintech transaction files (CSV or PDF) into Actual Budget-compatible CSV format.",
 					Version:     Version,
 				},
-				DisableDefaultServer: env.Environment == "production",
+				DisableDefaultServer: isProd,
 			}),
 		),
-		fuego.WithAddr(fmt.Sprintf("0.0.0.0:%d", env.Port)),
+		fuego.WithAddr(fmt.Sprintf("%s:%d", host, env.Port)),
 	)
 
-	if env.Environment == "production" {
+	if isProd {
 		server.OpenAPI.Description().Servers = []*openapi3.Server{
 			{
 				URL:         env.PublicURL,

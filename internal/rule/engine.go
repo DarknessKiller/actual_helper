@@ -4,7 +4,7 @@ import (
 	"strings"
 	"sync"
 
-	"actual-helper/internal/models"
+	"actual_helper/internal/models"
 )
 
 type Engine struct {

@@ -4,7 +4,7 @@ import (
 	"context"
 	"strings"
 
-	rytprov "actual-helper/internal/providers/ryt"
+	rytprov "actual_helper/internal/providers/ryt"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"

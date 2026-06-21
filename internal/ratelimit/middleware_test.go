@@ -8,7 +8,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"actual-helper/internal/ratelimit"
+	"actual_helper/internal/ratelimit"
 )
 
 var _ = Describe("RateLimiter", func() {

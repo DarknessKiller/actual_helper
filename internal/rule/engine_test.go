@@ -4,8 +4,8 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"actual-helper/internal/models"
-	"actual-helper/internal/rule"
+	"actual_helper/internal/models"
+	"actual_helper/internal/rule"
 )
 
 var _ = Describe("Engine", func() {
