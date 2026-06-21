@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"reflect"
 
-	"actual-helper/internal/models"
+	"actual_helper/internal/models"
 )
 
 func ToActualCSV(reports []models.ActualBudgetReport) ([]byte, error) {

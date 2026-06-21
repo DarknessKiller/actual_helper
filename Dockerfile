@@ -7,7 +7,7 @@ COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -trimpath \
-    -ldflags="-s -w -X actual-helper/internal/config.Version=${VERSION:-$(git describe --tags --always --dirty)}" \
+    -ldflags="-s -w -X actual_helper/internal/config.Version=${VERSION:-$(git describe --tags --always --dirty)}" \
     -o actual_helper ./cmd/app
 
 # Runtime stage

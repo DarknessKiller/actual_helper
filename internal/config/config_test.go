@@ -8,8 +8,8 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"actual-helper/internal/config"
-	"actual-helper/internal/models"
+	"actual_helper/internal/config"
+	"actual_helper/internal/models"
 )
 
 var _ = Describe("Loader", func() {

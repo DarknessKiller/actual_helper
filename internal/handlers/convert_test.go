@@ -8,10 +8,10 @@ import (
 	"net/http"
 	"net/http/httptest"
 
-	"actual-helper/internal/handlers"
-	"actual-helper/internal/models"
-	"actual-helper/internal/providers"
-	"actual-helper/internal/services"
+	"actual_helper/internal/handlers"
+	"actual_helper/internal/models"
+	"actual_helper/internal/providers"
+	"actual_helper/internal/services"
 
 	"github.com/go-fuego/fuego"
 	"github.com/go-fuego/fuego/option"

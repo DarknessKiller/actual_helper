@@ -1,4 +1,4 @@
-module actual-helper
+module actual_helper
 
 go 1.26.4
 

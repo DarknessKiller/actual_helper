@@ -5,7 +5,7 @@ import (
 	"log/slog"
 	"time"
 
-	"actual-helper/internal/services"
+	"actual_helper/internal/services"
 
 	"github.com/go-fuego/fuego"
 	"github.com/go-fuego/fuego/option"

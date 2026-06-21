@@ -10,9 +10,9 @@ import (
 	"strings"
 	"time"
 
-	"actual-helper/internal/models"
-	"actual-helper/internal/providers"
-	"actual-helper/internal/rule"
+	"actual_helper/internal/models"
+	"actual_helper/internal/providers"
+	"actual_helper/internal/rule"
 )
 
 type RytProvider struct {
