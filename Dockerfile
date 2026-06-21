@@ -1,4 +1,12 @@
-# Build stage
+# Frontend build stage
+FROM node:26-alpine AS frontend-builder
+WORKDIR /app
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm ci
+COPY frontend/ .
+RUN npm run build
+
+# Backend build stage
 FROM golang:1.26-alpine AS builder
 WORKDIR /app
 ARG VERSION
@@ -13,6 +21,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build -trimpath \
 # Runtime stage
 FROM scratch
 WORKDIR /app
+COPY --from=frontend-builder /app/dist frontend/dist
 COPY --from=builder /app/actual_helper actual_helper
 COPY --from=builder /app/provider_config.json provider_config.json
 ENV PROVIDER_CONFIG_PATH=/app/provider_config.json
