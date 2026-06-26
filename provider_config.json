@@ -26,6 +26,11 @@
       "account_mappings": {
         "Savings Account": "Current"
       }
+    },
+    "hsbccredit": {
+      "account_mappings": {
+        "HSBC Credit Card": "Current"
+      }
     }
   }
 }

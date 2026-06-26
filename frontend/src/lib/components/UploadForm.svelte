@@ -12,7 +12,7 @@
   let errorMsg = $state('')
   let dragOver = $state(false)
 
-  const providers = ['tng', 'ryt']
+  const providers = ['tng', 'ryt', 'hsbccredit']
   let fileInput = $state(null)
 
   function handleFileSelect(e) {

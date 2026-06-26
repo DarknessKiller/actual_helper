@@ -10,7 +10,6 @@ RUN npm run build
 FROM golang:1.26-alpine AS builder
 WORKDIR /app
 ARG VERSION
-ARG PORT=8080
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
@@ -20,7 +19,8 @@ RUN CGO_ENABLED=0 GOOS=linux go build -tags embed -trimpath \
     -o actual_helper ./cmd/app
 
 # Runtime stage
-FROM scratch
+FROM alpine:3.21
+RUN apk add --no-cache tesseract-ocr poppler-utils imagemagick
 WORKDIR /app
 COPY --from=builder /app/actual_helper actual_helper
 COPY --from=builder /app/provider_config.json provider_config.json
