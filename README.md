@@ -58,6 +58,17 @@ CSV columns expected: `Date`, `Status`, `Transaction Type`, `Reference ID`, `Des
 | **Date format** | `d Month YYYY` (e.g., `1 May 2026`) |
 | **Special handling** | Opening balance rows are automatically skipped |
 
+### HSBC Credit Card (Malaysia)
+
+| | |
+|---|---|
+| **Provider name** | `hsbccredit` |
+| **File formats** | PDF only (image-based, OCR via tesseract + gosseract) |
+| **Credit detection** | Amount suffixed with `CR` (e.g., `259.72CR` = payment received) |
+| **Debit detection** | Plain positive amount (e.g., `8.50` = purchase) |
+| **Date format** | `DD MMM` (year inferred from statement header; cross-year boundary handled) |
+| **Special handling** | Summary rows (previous balance, credit limit, charges) are automatically skipped; OCR fallback for scanned/image-based statements |
+
 ### Adding a New Provider
 
 1. Create a new package under `internal/providers/<name>/`
@@ -124,6 +135,14 @@ Set the `PROVIDER_CONFIG_PATH` environment variable to point to a JSON configura
     },
     "ryt": {
       "account_mappings": { "Savings Account": "Current" }
+    },
+    "hsbccredit": {
+      "account_mappings": { "xxxx xxxx xxxx xxxx": "HSBC XXXX" },
+      "exclude_keywords": ["Grab"],
+      "include_keywords": [],
+      "categories": [
+        { "keyword": "shopee", "group": "Shopping", "category": "Online" }
+      ]
     }
   }
 }
@@ -161,5 +180,6 @@ Each package has its own test suite covering success paths, failure paths, and e
 | **Language** | Go 1.26 |
 | **Web framework** | [Fuego](https://github.com/go-fuego/fuego) |
 | **Testing** | Ginkgo v2, Gomega, httptest |
-| **PDF extraction** | ledongthuc/pdf |
+| **PDF extraction** | ledongthuc/pdf (digital), tesseract + gosseract (OCR fallback) |
 | **PDF decryption** | pdfcpu |
+| **PDF rendering** | poppler-utils (pdftoppm) |
