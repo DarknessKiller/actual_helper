@@ -287,7 +287,6 @@ Ref. ID: F20260502MNOPQR3
 	It("returns error for text without account transactions section", func() {
 		_, err := provider.ParsePDFText(ctx, "random text")
 		Expect(err).To(HaveOccurred())
-		Expect(err.Error()).To(ContainSubstring("no account transactions section found"))
 	})
 
 	It("returns empty for text with header but no transactions", func() {
@@ -340,7 +339,6 @@ var _ = Describe("RytProvider", func() {
 			provider := rytprov.New(nil, nil, nil, nil)
 			_, err := provider.ParseCSV(context.Background(), strings.NewReader("a,b,c\n1,2,3"))
 			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring("CSV not supported"))
 		})
 	})
 

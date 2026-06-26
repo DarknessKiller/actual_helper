@@ -34,25 +34,32 @@ func (service *ConvertService) ConvertFile(ctx context.Context, providerName str
 	service.reloadProvider(providerName, provider)
 
 	var reports []models.ActualBudgetReport
-	var err error
 
-	if strings.Contains(contentType, "pdf") {
+	switch {
+	case strings.Contains(contentType, "pdf"):
 		var text string
-		text, err = pdfutil.ExtractText(file, password)
-		if err == nil {
-			reports, err = provider.ParsePDFText(ctx, text)
+		text, err := pdfutil.ExtractText(file, password)
+		if err != nil {
+			return nil, fmt.Errorf("pdf extraction: %w", err)
 		}
-	} else {
+		reports, err = provider.ParsePDFText(ctx, text)
+		if err != nil {
+			return nil, fmt.Errorf("pdf parsing: %w", err)
+		}
+	case strings.Contains(contentType, "csv"):
 		var data []byte
-		data, err = io.ReadAll(file)
-		if err == nil {
-			logger.InfoContext(ctx, "file parsing started", "size_bytes", len(data))
-			reports, err = provider.ParseCSV(ctx, bytes.NewReader(data))
+		data, err := io.ReadAll(file)
+		if err != nil {
+			return nil, fmt.Errorf("csv read: %w", err)
 		}
-	}
-
-	if err != nil {
-		return nil, fmt.Errorf("parse: %w", err)
+		logger.InfoContext(ctx, "file parsing started", "size_bytes", len(data))
+		reports, err = provider.ParseCSV(ctx, bytes.NewReader(data))
+		if err != nil {
+			return nil, fmt.Errorf("csv parsing: %w", err)
+		}
+	default:
+		err := fmt.Errorf("unsupported content type")
+		return nil, err
 	}
 
 	logger.InfoContext(ctx, "parsing complete", "records", len(reports))

@@ -1,20 +1,18 @@
 # TNG PDF Parsing Design
 
 **Created:** 2026-06-20T21:00:00+08:00
-**Updated:** 2026-06-20T21:00:00+08:00
+**Updated:** 2026-06-26T21:28:52+08:00
 
 ## Overview
 
-Add PDF parsing support to the TNG provider so it handles both CSV (from bentopdf) and raw encrypted PDF (direct from TNG email attachment). The approach extracts transaction blocks from extracted PDF text, reconstructs `TNGReport` structs, then feeds them through a shared mapping layer.
+Add PDF parsing support to the TNG provider. TNG only supports PDF (CSV is disabled). The approach extracts transaction blocks from extracted PDF text, reconstructs `TNGReport` structs, then feeds them through a shared mapping layer.
 
 ## Architecture
 
-Introduce a shared `toActualReports()` method on `TNGProvider` to eliminate duplication between `ParseCSV` and `ParsePDFText`:
+Introduce a shared `toActualReports()` method on `TNGProvider` used by `ParsePDFText`:
 
 ```
-ParseCSV:     csv.Reader → []TNGReport ─┐
-                                         ├── → toActualReports() → []ActualBudgetReport
-ParsePDFText: parsePDFBlocks(text) → ────┘
+ParsePDFText: parsePDFBlocks(text) → toActualReports() → []ActualBudgetReport
 ```
 
 ## PDF Text Parsing Algorithm
@@ -82,8 +80,6 @@ Responsibilities:
 - Apply categories via existing `match()`
 - Map to `ActualBudgetReport`
 
-`ParseCSV` changes: read CSV → `[]TNGReport` → call `toActualReports()`. No behavior change.
-
 `ParsePDFText` signature changes from returning an error to:
 
 ```go
@@ -107,8 +103,8 @@ Same skip-and-continue pattern as the CSV path.
 
 ## Files Modified
 
-- `internal/providers/tng/service.go` — add `parsePDFBlocks()`, add `toActualReports()`, simplify `ParseCSV`, implement `ParsePDFText`
-- `internal/providers/tng/service_test.go` — replace existing `ParsePDFText` "not supported" test with real PDF parsing tests
+- `internal/providers/tng/service.go` — add `parsePDFBlocks()`, add `toActualReports()`, disable `ParseCSV` (returns error), implement `ParsePDFText`
+- `internal/providers/tng/service_test.go` — replace existing `ParsePDFText` "not supported" test with real PDF parsing tests; replace CSV tests with single error test
 - Optional: `internal/providers/tng/report.go` — no changes expected (TNGReport unchanged)
 
 ## Test Plan

@@ -1,41 +1,44 @@
 <script>
-  import { clearHistory } from '$lib/stores/history.js'
-  import { fade, slide } from 'svelte/transition'
+  import { clearHistory } from "$lib/stores/history.js";
+  import { fade, slide } from "svelte/transition";
 
-  let { conversions = $bindable([]) } = $props()
+  let { conversions = $bindable([]) } = $props();
 
-  let providerFilter = $state('')
+  let providerFilter = $state("");
 
   let stats = $derived({
     total: conversions.length,
     byProvider: conversions.reduce((acc, c) => {
-      acc[c.provider] = (acc[c.provider] || 0) + 1
-      return acc
+      acc[c.provider] = (acc[c.provider] || 0) + 1;
+      return acc;
     }, {}),
-    today: conversions.filter(c => {
-      const d = new Date(c.timestamp)
-      const now = new Date()
-      return d.toDateString() === now.toDateString()
-    }).length
-  })
+    today: conversions.filter((c) => {
+      const d = new Date(c.timestamp);
+      const now = new Date();
+      return d.toDateString() === now.toDateString();
+    }).length,
+  });
 
   let filtered = $derived(
     providerFilter
-      ? conversions.filter(c => c.provider === providerFilter)
-      : conversions
-  )
+      ? conversions.filter((c) => c.provider === providerFilter)
+      : conversions,
+  );
 
   function handleClear() {
-    clearHistory()
-    conversions = []
+    clearHistory();
+    conversions = [];
   }
 
   function formatDate(iso) {
-    const d = new Date(iso)
-    return d.toLocaleDateString('en-MY', {
-      day: 'numeric', month: 'short', year: 'numeric',
-      hour: '2-digit', minute: '2-digit'
-    })
+    const d = new Date(iso);
+    return d.toLocaleDateString("en-MY", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
   }
 </script>
 
@@ -50,7 +53,9 @@
       </div>
 
       <!-- Stats -->
-      <div class="stats stats-vertical sm:stats-horizontal shadow-sm mb-4 w-full">
+      <div
+        class="stats stats-vertical sm:stats-horizontal shadow-sm mb-4 w-full"
+      >
         <div class="stat">
           <div class="stat-title">Total Files</div>
           <div class="stat-value text-primary text-2xl">{stats.total}</div>
@@ -71,13 +76,15 @@
       <div class="flex gap-2 mb-3">
         <button
           class="btn btn-xs {!providerFilter ? 'btn-primary' : 'btn-ghost'}"
-          onclick={() => providerFilter = ''}
-        >All</button>
+          onclick={() => (providerFilter = "")}>All</button
+        >
         {#each Object.keys(stats.byProvider) as p}
           <button
-            class="btn btn-xs {providerFilter === p ? 'btn-primary' : 'btn-ghost'}"
-            onclick={() => providerFilter = p}
-          >{p.toUpperCase()}</button>
+            class="btn btn-xs {providerFilter === p
+              ? 'btn-primary'
+              : 'btn-ghost'}"
+            onclick={() => (providerFilter = p)}>{p.toUpperCase()}</button
+          >
         {/each}
       </div>
 
@@ -89,10 +96,16 @@
             in:slide={{ duration: 300 }}
           >
             <div class="flex items-center gap-3 min-w-0 flex-1">
-              <span class="badge badge-outline badge-sm">{conversion.provider.toUpperCase()}</span>
+              <span class="badge badge-outline badge-sm"
+                >{conversion.provider.toUpperCase()}</span
+              >
               <div class="min-w-0 flex-1">
-                <p class="text-sm font-medium truncate">{conversion.filename}</p>
-                <p class="text-xs text-base-content/40">{formatDate(conversion.timestamp)}</p>
+                <p class="text-sm font-medium truncate">
+                  {conversion.filename}
+                </p>
+                <p class="text-xs text-base-content/40">
+                  {formatDate(conversion.timestamp)}
+                </p>
               </div>
             </div>
             <div class="badge badge-success badge-sm gap-1 shrink-0">
@@ -108,7 +121,9 @@
     <div class="card-body items-center text-center py-8">
       <div class="text-4xl mb-3 opacity-30">📋</div>
       <h3 class="card-title text-base-content/50">No conversions yet</h3>
-      <p class="text-sm text-base-content/40">Upload a file above to get started</p>
+      <p class="text-sm text-base-content/40">
+        Upload a file above to get started
+      </p>
     </div>
   </div>
 {/if}

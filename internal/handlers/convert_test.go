@@ -7,6 +7,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
+	"net/textproto"
 
 	"actual_helper/internal/handlers"
 	"actual_helper/internal/models"
@@ -64,7 +65,10 @@ var _ = Describe("ConvertHandler", func() {
 
 			var buf bytes.Buffer
 			w := multipart.NewWriter(&buf)
-			fw, _ := w.CreateFormFile("file", "test.csv")
+			h := make(textproto.MIMEHeader)
+			h.Set("Content-Disposition", `form-data; name="file"; filename="test.csv"`)
+			h.Set("Content-Type", "text/csv")
+			fw, _ := w.CreatePart(h)
 			fw.Write([]byte("a,b,c"))
 			w.Close()
 
@@ -90,7 +94,10 @@ var _ = Describe("ConvertHandler", func() {
 
 			var buf bytes.Buffer
 			w := multipart.NewWriter(&buf)
-			fw, _ := w.CreateFormFile("file", "test.csv")
+			h := make(textproto.MIMEHeader)
+			h.Set("Content-Disposition", `form-data; name="file"; filename="test.csv"`)
+			h.Set("Content-Type", "text/csv")
+			fw, _ := w.CreatePart(h)
 			fw.Write([]byte("dummy,csv,data"))
 			w.Close()
 

@@ -52,7 +52,7 @@ func (p *HSBCProvider) Name() string {
 }
 
 func (p *HSBCProvider) ParseCSV(ctx context.Context, r io.Reader) ([]models.ActualBudgetReport, error) {
-	return nil, errors.New("CSV not supported for hsbc provider")
+	return nil, errors.New("not supported for hsbc provider")
 }
 
 func (p *HSBCProvider) ParsePDFText(ctx context.Context, text string) ([]models.ActualBudgetReport, error) {
