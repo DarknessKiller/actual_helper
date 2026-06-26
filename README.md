@@ -41,12 +41,10 @@ Configuration is checked on every request by comparing the config file's mtime. 
 | | |
 |---|---|
 | **Provider name** | `tng` |
-| **File formats** | CSV, PDF |
+| **File formats** | PDF only |
 | **Credit detection** | Transaction type-based: Reload, Receive from Wallet, DUITNOW_RECEIVEFROM, Refund, GO+ Daily Earnings, GO+ Cash In |
 | **Debit detection** | All other transaction types |
 | **Filtering** | Reference token detection skips lines with long reference IDs or known prefixes (TNGD, TNGQR, TNGOW) |
-
-CSV columns expected: `Date`, `Status`, `Transaction Type`, `Reference ID`, `Description`, `Details`, `Amount`.
 
 ### Ryt Bank
 

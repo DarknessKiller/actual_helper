@@ -2,9 +2,7 @@ package tng
 
 import (
 	"context"
-	"encoding/csv"
 	"errors"
-	"fmt"
 	"io"
 	"log/slog"
 	"regexp"
@@ -66,40 +64,8 @@ func (p *TNGProvider) Name() string {
 	return "tng"
 }
 
-func (p *TNGProvider) ParseCSV(ctx context.Context, fileReader io.Reader) ([]models.ActualBudgetReport, error) {
-	logger := slog.With("provider", "tng", "format", "csv")
-
-	csvReader := csv.NewReader(fileReader)
-	csvReader.LazyQuotes = true
-	csvReader.FieldsPerRecord = -1
-
-	records, err := csvReader.ReadAll()
-	if err != nil {
-		return nil, fmt.Errorf("read csv: %w", err)
-	}
-
-	logger.InfoContext(ctx, "csv parsing started", "total_rows", len(records))
-
-	if len(records) < 2 {
-		logger.InfoContext(ctx, "csv parsing complete", "parsed_count", 0)
-		return nil, nil
-	}
-
-	columnIndex := buildIndex(records[0])
-	var reports []TNGReport
-
-	for i, row := range records[1:] {
-		report, err := parseRow(columnIndex, row)
-		if err != nil {
-			logger.DebugContext(ctx, "row skipped", "row", i+1, "reason", err.Error())
-			continue
-		}
-		reports = append(reports, report)
-	}
-
-	result := p.toActualReports(ctx, logger, reports, "")
-	logger.InfoContext(ctx, "csv parsing complete", "parsed_count", len(result))
-	return result, nil
+func (p *TNGProvider) ParseCSV(_ context.Context, _ io.Reader) ([]models.ActualBudgetReport, error) {
+	return nil, errors.New("not supported for tng provider")
 }
 
 func (p *TNGProvider) toActualReports(ctx context.Context, logger *slog.Logger, reports []TNGReport, accountName string) []models.ActualBudgetReport {
@@ -170,38 +136,6 @@ func (p *TNGProvider) ParsePDFText(ctx context.Context, text string) ([]models.A
 	result := p.toActualReports(ctx, logger, reports, "")
 	logger.InfoContext(ctx, "pdf parsing complete", "parsed_count", len(result))
 	return result, nil
-}
-
-func buildIndex(header []string) map[string]int {
-	columnIndex := make(map[string]int, len(header))
-	for i, name := range header {
-		columnIndex[strings.TrimSpace(name)] = i
-	}
-	return columnIndex
-}
-
-func lookup(columnIndex map[string]int, row []string, name string) string {
-	index, ok := columnIndex[name]
-	if !ok || index >= len(row) {
-		return ""
-	}
-	return strings.TrimSpace(row[index])
-}
-
-func parseRow(columnIndex map[string]int, row []string) (TNGReport, error) {
-	report := TNGReport{
-		Date:            lookup(columnIndex, row, "F"),
-		Status:          lookup(columnIndex, row, "Status"),
-		TransactionType: lookup(columnIndex, row, "Transaction Type"),
-		Reference:       lookup(columnIndex, row, "Reference"),
-		Description:     lookup(columnIndex, row, "Description"),
-		Details:         lookup(columnIndex, row, "Details"),
-		Amount:          lookup(columnIndex, row, "Amount(RM)"),
-	}
-	if report.Date == "" || report.Status == "" || report.Description == "" || report.Amount == "" {
-		return report, errors.New("missing required column")
-	}
-	return report, nil
 }
 
 func isCredit(transactionType string) bool {

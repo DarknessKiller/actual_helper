@@ -1,8 +1,8 @@
 <script>
-  import { fade, fly } from 'svelte/transition'
+  import { fade, fly } from "svelte/transition";
 
-  let { filename = '', provider = '' } = $props()
-  let visible = $state(true)
+  let { filename = "", provider = "" } = $props();
+  let visible = $state(true);
 </script>
 
 {#if visible}
@@ -19,7 +19,7 @@
       </p>
       <button
         class="btn btn-outline btn-success btn-sm mt-2"
-        onclick={() => visible = false}
+        onclick={() => (visible = false)}
       >
         Dismiss
       </button>
