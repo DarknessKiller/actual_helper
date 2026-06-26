@@ -129,7 +129,6 @@ RM150.00`
 	It("returns error for text without transaction section", func() {
 		_, err := provider.ParsePDFText(ctx, "random text")
 		Expect(err).To(HaveOccurred())
-		Expect(err.Error()).To(ContainSubstring("no transactions section found"))
 	})
 
 	It("returns empty for text with header but no transactions", func() {

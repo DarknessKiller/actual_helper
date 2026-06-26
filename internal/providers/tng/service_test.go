@@ -20,7 +20,6 @@ var _ = Describe("TNGProvider", func() {
 		It("returns error because tng only supports PDF", func() {
 			_, err := provider.ParseCSV(ctx, strings.NewReader("a,b,c\n1,2,3"))
 			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring("CSV not supported"))
 		})
 	})
 

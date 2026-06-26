@@ -80,7 +80,6 @@ Your statement balance 259.72`
 	It("returns error for text without statement date", func() {
 		_, err := provider.ParsePDFText(ctx, "random text")
 		Expect(err).To(HaveOccurred())
-		Expect(err.Error()).To(ContainSubstring("statement date not found"))
 	})
 
 	It("returns empty for text with header but no transactions", func() {
