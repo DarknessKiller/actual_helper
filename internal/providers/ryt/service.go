@@ -45,7 +45,7 @@ func (p *RytProvider) Name() string {
 }
 
 func (p *RytProvider) ParseCSV(ctx context.Context, r io.Reader) ([]models.ActualBudgetReport, error) {
-	return nil, errors.New("CSV not supported for ryt provider")
+	return nil, errors.New("not supported for ryt provider")
 }
 
 func (p *RytProvider) ParsePDFText(ctx context.Context, text string) ([]models.ActualBudgetReport, error) {

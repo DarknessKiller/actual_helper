@@ -65,7 +65,7 @@ func (p *TNGProvider) Name() string {
 }
 
 func (p *TNGProvider) ParseCSV(_ context.Context, _ io.Reader) ([]models.ActualBudgetReport, error) {
-	return nil, errors.New("CSV not supported for tng provider")
+	return nil, errors.New("not supported for tng provider")
 }
 
 func (p *TNGProvider) toActualReports(ctx context.Context, logger *slog.Logger, reports []TNGReport, accountName string) []models.ActualBudgetReport {
