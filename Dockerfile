@@ -19,8 +19,9 @@ RUN CGO_ENABLED=0 GOOS=linux go build -tags embed -trimpath \
     -o actual_helper ./cmd/app
 
 # Runtime stage
-FROM alpine:3.21
-RUN apk add --no-cache tesseract-ocr poppler-utils imagemagick
+FROM alpine:3.23
+RUN echo "https://dl-cdn.alpinelinux.org/alpine/v3.23/community" >> /etc/apk/repositories \
+ && apk add --no-cache tesseract-ocr tesseract-ocr-data-eng tesseract-ocr-data-msa poppler-utils imagemagick
 WORKDIR /app
 COPY --from=builder /app/actual_helper actual_helper
 COPY --from=builder /app/provider_config.json provider_config.json

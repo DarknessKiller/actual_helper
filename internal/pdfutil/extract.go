@@ -207,7 +207,7 @@ func splitIntoStrips(path string) ([]string, error) {
 }
 
 func ocrImage(path string) (string, error) {
-	cmd := exec.Command("tesseract", path, "stdout", "-l", "eng")
+	cmd := exec.Command("tesseract", path, "stdout", "-l", "eng+msa")
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	if err := cmd.Run(); err != nil {
