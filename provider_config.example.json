@@ -15,7 +15,11 @@
       "account_mappings": {
         "": "Current"
       },
-      "exclude_keywords": ["Quick Reload Payment", "Via eWallet to GO+", "Daily Interest"],
+      "exclude_keywords": [
+        "Quick Reload Payment",
+        "Via eWallet to GO+",
+        "Daily Interest"
+      ],
       "include_keywords": [],
       "categories": [
         {
@@ -53,6 +57,11 @@
     "ryt": {
       "account_mappings": {
         "Savings Account": "Current"
+      }
+    },
+    "hsbccredit": {
+      "account_mappings": {
+        "HSBC Credit Card": "Current"
       }
     }
   }

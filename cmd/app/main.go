@@ -7,6 +7,7 @@ import (
 	"actual_helper/internal/bootstrap"
 	"actual_helper/internal/config"
 	"actual_helper/internal/handlers"
+	hsbccreditprov "actual_helper/internal/providers/hsbccredit"
 	rytprov "actual_helper/internal/providers/ryt"
 	tngprov "actual_helper/internal/providers/tng"
 	"actual_helper/internal/ratelimit"
@@ -18,8 +19,9 @@ import (
 
 func main() {
 	registry, loader, env := bootstrap.Init(map[string]bootstrap.ProviderFactory{
-		"tng": tngprov.New,
-		"ryt": rytprov.New,
+		"tng":  tngprov.New,
+		"ryt":  rytprov.New,
+		"hsbccredit": hsbccreditprov.New,
 	})
 
 	server := config.NewFuegoServer(env)
