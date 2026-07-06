@@ -9,14 +9,21 @@ import (
 	"os/exec"
 	"path/filepath"
 	"sort"
-	"strings"
 
 	"github.com/ledongthuc/pdf"
 	"github.com/pdfcpu/pdfcpu/pkg/api"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 )
 
-func ExtractText(r io.Reader, password string) (string, error) {
+type ExtractionMethod string
+
+const (
+	ExtractionMethodDigital   ExtractionMethod = "digital"
+	ExtractionMethodPdftotext ExtractionMethod = "pdftotext"
+	ExtractionMethodOCR       ExtractionMethod = "ocr"
+)
+
+func ExtractText(r io.Reader, password string, method ExtractionMethod) (string, error) {
 	data, err := io.ReadAll(r)
 	if err != nil {
 		return "", fmt.Errorf("read input: %w", err)
@@ -32,33 +39,16 @@ func ExtractText(r io.Reader, password string) (string, error) {
 		data = buf.Bytes()
 	}
 
-	methods := []struct {
-		name string
-		fn   func([]byte) (string, error)
-	}{
-		{"digital", extractDigital},
-		{"pdftotext", extractWithPdftotext},
-		{"ocr", extractWithOCR},
+	switch method {
+	case ExtractionMethodDigital:
+		return extractDigital(data)
+	case ExtractionMethodPdftotext:
+		return extractWithPdftotext(data)
+	case ExtractionMethodOCR:
+		return extractWithOCR(data)
+	default:
+		return "", fmt.Errorf("unknown extraction method: %s", method)
 	}
-
-	var best string
-	for _, m := range methods {
-		t, err := m.fn(data)
-		if err != nil {
-			slog.Warn("pdf extraction method failed", "method", m.name, "error", err)
-			continue
-		}
-		if len(strings.TrimSpace(t)) > len(strings.TrimSpace(best)) {
-			slog.Info("pdf extraction method produced longer text", "method", m.name, "chars", len(strings.TrimSpace(t)))
-			best = t
-		}
-	}
-
-	if strings.TrimSpace(best) == "" {
-		return "", fmt.Errorf("all extraction methods returned empty text")
-	}
-
-	return best, nil
 }
 
 func extractDigital(data []byte) (string, error) {

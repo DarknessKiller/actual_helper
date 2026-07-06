@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"actual_helper/internal/models"
+	"actual_helper/internal/pdfutil"
 	"actual_helper/internal/providers"
 	"actual_helper/internal/rule"
 )
@@ -155,4 +156,8 @@ func parseAmount(amountStr string) (float64, error) {
 	amountStr = strings.ReplaceAll(amountStr, "RM", "")
 	amountStr = strings.ReplaceAll(amountStr, ",", "")
 	return strconv.ParseFloat(amountStr, 64)
+}
+
+func (p *TNGProvider) ExtractionMethod() pdfutil.ExtractionMethod {
+	return pdfutil.ExtractionMethodDigital
 }

@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"actual_helper/internal/models"
+	"actual_helper/internal/pdfutil"
 	"actual_helper/internal/providers"
 	"actual_helper/internal/services"
 
@@ -15,11 +16,13 @@ import (
 )
 
 type mockProvider struct {
-	name        string
-	csvReports  []models.ActualBudgetReport
-	csvErr      error
-	pdfReports  []models.ActualBudgetReport
-	pdfErr      error
+	name       string
+	csvReports []models.ActualBudgetReport
+	csvErr     error
+	pdfReports []models.ActualBudgetReport
+	pdfErr     error
+
+	extractionMethod pdfutil.ExtractionMethod
 }
 
 func (m *mockProvider) Name() string { return m.name }
@@ -29,12 +32,15 @@ func (m *mockProvider) ParseCSV(_ context.Context, _ io.Reader) ([]models.Actual
 func (m *mockProvider) ParsePDFText(_ context.Context, _ string) ([]models.ActualBudgetReport, error) {
 	return m.pdfReports, m.pdfErr
 }
+func (m *mockProvider) ExtractionMethod() pdfutil.ExtractionMethod {
+	return pdfutil.ExtractionMethodDigital
+}
 
 var _ = Describe("ConvertService", func() {
 	var (
-		svc     *services.ConvertService
-		reg     *providers.Registry
-		ctx     = context.Background()
+		svc *services.ConvertService
+		reg *providers.Registry
+		ctx = context.Background()
 	)
 
 	BeforeEach(func() {
@@ -68,7 +74,7 @@ var _ = Describe("ConvertService", func() {
 
 		It("routes PDF files to ParsePDFText", func() {
 			mock := &mockProvider{
-				name: "test",
+				name:   "test",
 				pdfErr: nil,
 			}
 			reg.Register(mock)

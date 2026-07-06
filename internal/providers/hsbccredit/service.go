@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"actual_helper/internal/models"
+	"actual_helper/internal/pdfutil"
 	"actual_helper/internal/providers"
 	"actual_helper/internal/rule"
 )
@@ -115,4 +116,8 @@ func (p *HSBCProvider) toActualReports(ctx context.Context, logger *slog.Logger,
 	}
 
 	return result
+}
+
+func (p *HSBCProvider) ExtractionMethod() pdfutil.ExtractionMethod {
+	return pdfutil.ExtractionMethodOCR
 }

@@ -24,7 +24,9 @@ RUN echo "https://dl-cdn.alpinelinux.org/alpine/v3.23/community" >> /etc/apk/rep
  && apk add --no-cache tesseract-ocr tesseract-ocr-data-eng tesseract-ocr-data-msa poppler-utils imagemagick
 WORKDIR /app
 COPY --from=builder /app/actual_helper actual_helper
-COPY --from=builder /app/provider_config.json provider_config.json
-ENV PROVIDER_CONFIG_PATH=/app/provider_config.json
+COPY --from=builder /app/provider_config.example.json provider_config.example.json
+ENV APP_ENV=production
+ENV PROVIDER_CONFIG_PATH=/app/provider_config.example.json
+ENV PORT=8080
 EXPOSE $PORT
 CMD ["/app/actual_helper"]
