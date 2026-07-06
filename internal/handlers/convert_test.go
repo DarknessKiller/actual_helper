@@ -11,6 +11,7 @@ import (
 
 	"actual_helper/internal/handlers"
 	"actual_helper/internal/models"
+	"actual_helper/internal/pdfutil"
 	"actual_helper/internal/providers"
 	"actual_helper/internal/services"
 
@@ -22,7 +23,8 @@ import (
 )
 
 type mockProvider struct {
-	name string
+	name             string
+	extractionMethod pdfutil.ExtractionMethod
 }
 
 func (m *mockProvider) Name() string { return m.name }
@@ -33,6 +35,9 @@ func (m *mockProvider) ParseCSV(context.Context, io.Reader) ([]models.ActualBudg
 }
 func (m *mockProvider) ParsePDFText(context.Context, string) ([]models.ActualBudgetReport, error) {
 	return nil, nil
+}
+func (m *mockProvider) ExtractionMethod() pdfutil.ExtractionMethod {
+	return pdfutil.ExtractionMethodDigital
 }
 
 var _ = Describe("ConvertHandler", func() {

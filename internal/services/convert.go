@@ -31,6 +31,10 @@ func (service *ConvertService) ConvertFile(ctx context.Context, providerName str
 		return nil, fmt.Errorf("provider %q not found", providerName)
 	}
 
+	if provider == nil || provider.ExtractionMethod() == "" {
+		return nil, fmt.Errorf("provider %q not configured", providerName)
+	}
+
 	service.reloadProvider(providerName, provider)
 
 	var reports []models.ActualBudgetReport
@@ -38,7 +42,7 @@ func (service *ConvertService) ConvertFile(ctx context.Context, providerName str
 	switch {
 	case strings.Contains(contentType, "pdf"):
 		var text string
-		text, err := pdfutil.ExtractText(file, password)
+		text, err := pdfutil.ExtractText(file, password, provider.ExtractionMethod())
 		if err != nil {
 			return nil, fmt.Errorf("pdf extraction: %w", err)
 		}
