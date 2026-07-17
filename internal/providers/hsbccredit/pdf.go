@@ -10,12 +10,12 @@ import (
 )
 
 var summaryPrefixes = []string{
-	"your previous statement balance",
-	"credit limit used last statement",
-	"your credit limit:",
-	"your charge(s) for this month",
-	"total credit limit used",
-	"your statement balance",
+	"Your Previous Statement Balance",
+	"Credit limit used last statement",
+	"Your Credit Limit:",
+	"Your charge(s) for this month",
+	"Total credit limit used",
+	"Your statement balance",
 }
 
 var (
@@ -128,7 +128,7 @@ func findTransactionStart(lines []string) int {
 func isSummaryLine(line string) bool {
 	lower := strings.ToLower(line)
 	for _, prefix := range summaryPrefixes {
-		if strings.HasPrefix(lower, prefix) {
+		if strings.HasPrefix(lower, strings.ToLower(prefix)) {
 			return true
 		}
 	}
