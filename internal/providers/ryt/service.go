@@ -5,7 +5,6 @@ import (
 	"errors"
 	"io"
 	"log/slog"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -67,7 +66,6 @@ func (p *RytProvider) ParsePDFText(ctx context.Context, text string) ([]models.A
 }
 
 func (p *RytProvider) toActualReports(ctx context.Context, logger *slog.Logger, reports []RytReport, accountName string) []models.ActualBudgetReport {
-	whitespacePattern := regexp.MustCompile(`\s+`)
 	var result []models.ActualBudgetReport
 
 	for _, report := range reports {
@@ -87,7 +85,7 @@ func (p *RytProvider) toActualReports(ctx context.Context, logger *slog.Logger, 
 			continue
 		}
 
-		description := strings.TrimSpace(whitespacePattern.ReplaceAllString(report.Description, " "))
+		description := strings.TrimSpace(whitespaceRe.ReplaceAllString(report.Description, " "))
 
 		amountStr := strings.ReplaceAll(report.Amount, ",", "")
 		amount, err := strconv.ParseFloat(amountStr, 64)

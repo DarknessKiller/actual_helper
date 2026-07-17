@@ -7,6 +7,14 @@ import (
 	"strings"
 )
 
+var (
+	dateRe       = regexp.MustCompile(`(?m)^\s*(\d{1,2} [A-Za-z]+ \d{4})\b`)
+	blockDateRe  = regexp.MustCompile(`^(\d{1,2} [A-Za-z]+ \d{4})\s*(.*)`)
+	signedRe     = regexp.MustCompile(`^[+-]\d+[.,]?\d*\.?\d*$`)
+	amountRe     = regexp.MustCompile(`^(-?\d+[.,]?\d*\.?\d*)$`)
+	whitespaceRe = regexp.MustCompile(`\s+`)
+)
+
 func extractAccountName(text string) string {
 	if strings.Contains(text, "Statement") {
 		lines := strings.Split(text, "\n")
@@ -55,7 +63,6 @@ func parseBlocks(text string) ([]RytReport, error) {
 		return nil, nil
 	}
 
-	dateRe := regexp.MustCompile(`(?m)^\s*(\d{1,2} [A-Za-z]+ \d{4})\b`)
 	splits := dateRe.FindAllStringSubmatchIndex(data, -1)
 	if len(splits) == 0 {
 		slog.Info("no transaction blocks found in pdf data",
@@ -97,8 +104,7 @@ func parseBlock(block string) (RytReport, error) {
 	}
 
 	firstLine := strings.TrimSpace(lines[0])
-	dateRe := regexp.MustCompile(`^(\d{1,2} [A-Za-z]+ \d{4})\s*(.*)`)
-	matches := dateRe.FindStringSubmatch(firstLine)
+	matches := blockDateRe.FindStringSubmatch(firstLine)
 	if matches == nil {
 		return RytReport{}, errors.New("no date found in block")
 	}
@@ -107,7 +113,6 @@ func parseBlock(block string) (RytReport, error) {
 
 	// Find amount: scan from bottom for [+-] prefix (signed transaction)
 	amountLine := -1
-	signedRe := regexp.MustCompile(`^[+-]\d+[.,]?\d*\.?\d*$`)
 	for i := len(lines) - 1; i >= 0; i-- {
 		line := strings.TrimSpace(lines[i])
 		if line == "" {
@@ -124,7 +129,6 @@ func parseBlock(block string) (RytReport, error) {
 		for i := len(lines) - 1; i >= 0; i-- {
 			line := strings.TrimSpace(lines[i])
 			if line != "" {
-				amountRe := regexp.MustCompile(`^(-?\d+[.,]?\d*\.?\d*)$`)
 				if amountRe.MatchString(line) {
 					amountLine = i
 					break

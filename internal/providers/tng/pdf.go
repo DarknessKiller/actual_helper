@@ -7,6 +7,12 @@ import (
 	"strings"
 )
 
+var (
+	dateRe           = regexp.MustCompile(`(?m)^(\d{1,2}/\d{1,2}/\d{4})\s+(Success|Failed)\s+`)
+	amountRe         = regexp.MustCompile(`RM(\d+[.,]?\d*\.\d{2})`)
+	whitespaceRe     = regexp.MustCompile(`\s+`)
+)
+
 func parsePDFBlocks(text string) ([]TNGReport, error) {
 	const marker = "TNG WALLET TRANSACTION"
 	idx := strings.LastIndex(text, marker)
@@ -18,7 +24,6 @@ func parsePDFBlocks(text string) ([]TNGReport, error) {
 	body := text[idx+len(marker):]
 	slog.Debug("pdf body preview", "body", truncate(body, 500))
 
-	dateRe := regexp.MustCompile(`(?m)^(\d{1,2}/\d{1,2}/\d{4})\s+(Success|Failed)\s+`)
 	splits := dateRe.FindAllStringSubmatchIndex(body, -1)
 	if len(splits) == 0 {
 		slog.Info("no transaction blocks found in pdf body",
@@ -73,7 +78,6 @@ func parseBlock(block string) (TNGReport, error) {
 		desc = trimAtReference(strings.TrimSpace(lines[4]))
 	}
 
-	amountRe := regexp.MustCompile(`RM(\d+[.,]?\d*\.\d{2})`)
 	amount := ""
 	for i := 5; i < len(lines); i++ {
 		if m := amountRe.FindStringSubmatch(strings.TrimSpace(lines[i])); m != nil {
