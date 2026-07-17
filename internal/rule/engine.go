@@ -16,8 +16,8 @@ type Engine struct {
 
 func NewEngine(excludeKeywords, includeKeywords []string, categories []models.CategoryRule) *Engine {
 	return &Engine{
-		excludeKeywords: copySlice(excludeKeywords),
-		includeKeywords: copySlice(includeKeywords),
+		excludeKeywords: lowerSlice(excludeKeywords),
+		includeKeywords: lowerSlice(includeKeywords),
 		categories:      copyCategories(categories),
 	}
 }
@@ -25,8 +25,8 @@ func NewEngine(excludeKeywords, includeKeywords []string, categories []models.Ca
 func (e *Engine) Reload(excludeKeywords, includeKeywords []string, categories []models.CategoryRule) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
-	e.excludeKeywords = copySlice(excludeKeywords)
-	e.includeKeywords = copySlice(includeKeywords)
+	e.excludeKeywords = lowerSlice(excludeKeywords)
+	e.includeKeywords = lowerSlice(includeKeywords)
 	e.categories = copyCategories(categories)
 }
 
@@ -38,7 +38,7 @@ func (e *Engine) ShouldSkip(description string) bool {
 
 	if len(e.includeKeywords) > 0 {
 		for _, kw := range e.includeKeywords {
-			if strings.Contains(lower, strings.ToLower(kw)) {
+			if strings.Contains(lower, kw) {
 				return false
 			}
 		}
@@ -46,7 +46,7 @@ func (e *Engine) ShouldSkip(description string) bool {
 	}
 
 	for _, kw := range e.excludeKeywords {
-		if strings.Contains(lower, strings.ToLower(kw)) {
+		if strings.Contains(lower, kw) {
 			return true
 		}
 	}
@@ -66,12 +66,14 @@ func (e *Engine) MatchCategory(description string) (string, string) {
 	return "", ""
 }
 
-func copySlice(s []string) []string {
+func lowerSlice(s []string) []string {
 	if s == nil {
 		return nil
 	}
 	out := make([]string, len(s))
-	copy(out, s)
+	for i, v := range s {
+		out[i] = strings.ToLower(v)
+	}
 	return out
 }
 

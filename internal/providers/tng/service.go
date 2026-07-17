@@ -5,7 +5,6 @@ import (
 	"errors"
 	"io"
 	"log/slog"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -70,7 +69,6 @@ func (p *TNGProvider) ParseCSV(_ context.Context, _ io.Reader) ([]models.ActualB
 }
 
 func (p *TNGProvider) toActualReports(ctx context.Context, logger *slog.Logger, reports []TNGReport, accountName string) []models.ActualBudgetReport {
-	whitespacePattern := regexp.MustCompile(`\s+`)
 	var result []models.ActualBudgetReport
 
 	for _, report := range reports {
@@ -90,7 +88,7 @@ func (p *TNGProvider) toActualReports(ctx context.Context, logger *slog.Logger, 
 			continue
 		}
 
-		description := strings.TrimSpace(whitespacePattern.ReplaceAllString(report.Description, " "))
+		description := strings.TrimSpace(whitespaceRe.ReplaceAllString(report.Description, " "))
 
 		amount, err := parseAmount(report.Amount)
 		if err != nil || amount == 0 {
