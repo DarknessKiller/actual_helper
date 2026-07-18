@@ -1,13 +1,13 @@
-package ryt
+package hlbcredit
 
 import (
 	"context"
 	"errors"
 	"io"
 	"log/slog"
+	"regexp"
 	"strconv"
 	"strings"
-	"time"
 
 	"actual_helper/internal/models"
 	"actual_helper/internal/pdfutil"
@@ -15,60 +15,60 @@ import (
 	"actual_helper/internal/rule"
 )
 
-type RytProvider struct {
+type HLBProvider struct {
 	engine         *rule.Engine
 	accountMapping map[string]string
 }
 
 func New(excludeKeywords, includeKeywords []string, categories []models.CategoryRule, accountMappings map[string]string) providers.Provider {
-	return &RytProvider{
+	return &HLBProvider{
 		engine:         rule.NewEngine(excludeKeywords, includeKeywords, categories),
 		accountMapping: accountMappings,
 	}
 }
 
-func (p *RytProvider) Reload(excludeKeywords, includeKeywords []string, categories []models.CategoryRule, accountMappings map[string]string) {
+func (p *HLBProvider) Reload(excludeKeywords, includeKeywords []string, categories []models.CategoryRule, accountMappings map[string]string) {
 	p.engine.Reload(excludeKeywords, includeKeywords, categories)
 	p.accountMapping = accountMappings
 }
 
-func (p *RytProvider) shouldSkip(description string) bool {
+func (p *HLBProvider) shouldSkip(description string) bool {
 	return p.engine.ShouldSkip(description)
 }
 
-func (p *RytProvider) matchCategory(description string) (string, string) {
+func (p *HLBProvider) matchCategory(description string) (string, string) {
 	return p.engine.MatchCategory(description)
 }
 
-func (p *RytProvider) Name() string {
-	return "ryt"
+func (p *HLBProvider) Name() string {
+	return "hlbcredit"
 }
 
-func (p *RytProvider) ParseCSV(ctx context.Context, r io.Reader) ([]models.ActualBudgetReport, error) {
-	return nil, errors.New("not supported for ryt provider")
+func (p *HLBProvider) ParseCSV(ctx context.Context, r io.Reader) ([]models.ActualBudgetReport, error) {
+	return nil, errors.New("not supported for hlbcredit provider")
 }
 
-func (p *RytProvider) ParsePDFText(ctx context.Context, text string) ([]models.ActualBudgetReport, error) {
-	logger := slog.With("provider", "ryt", "format", "pdf")
+func (p *HLBProvider) ParsePDFText(ctx context.Context, text string) ([]models.ActualBudgetReport, error) {
+	logger := slog.With("provider", "hlbcredit", "format", "pdf")
 
 	accountName := extractAccountName(text)
-
-	reports, err := parseBlocks(text)
+	reports, err := parseTransactions(text)
 	if err != nil {
 		return nil, err
 	}
 
-	logger.InfoContext(ctx, "pdf parsing started", "blocks", len(reports), "account", accountName)
+	logger.InfoContext(ctx, "pdf parsing started", "transactions", len(reports), "account", accountName)
 
 	result := p.toActualReports(ctx, logger, reports, accountName)
 	logger.InfoContext(ctx, "pdf parsing complete", "parsed_count", len(result))
 	return result, nil
 }
 
-func (p *RytProvider) toActualReports(ctx context.Context, logger *slog.Logger, reports []RytReport, accountName string) []models.ActualBudgetReport {
+var whitespacePattern = regexp.MustCompile(`\s+`)
+
+func (p *HLBProvider) toActualReports(ctx context.Context, logger *slog.Logger, reports []HLBReport, accountName string) []models.ActualBudgetReport {
 	var result []models.ActualBudgetReport
 
-	// Apply account mapping once before the loop
 	if p.accountMapping != nil {
 		if mapped, ok := p.accountMapping[accountName]; ok {
 			accountName = mapped
@@ -76,23 +76,12 @@ func (p *RytProvider) toActualReports(ctx context.Context, logger *slog.Logger, 
 	}
 
 	for _, report := range reports {
-		if strings.Contains(strings.ToLower(report.Description), "opening balance") {
-			logger.DebugContext(ctx, "row skipped: opening balance", "description", report.Description)
-			continue
-		}
-
 		if p.shouldSkip(report.Description) {
 			logger.DebugContext(ctx, "row skipped: filtered description", "description", report.Description)
 			continue
 		}
 
-		parsedDate, err := time.Parse("2 January 2006", report.Date)
-		if err != nil {
-			logger.DebugContext(ctx, "row skipped: invalid date", "raw", report.Date)
-			continue
-		}
-
-		description := strings.TrimSpace(whitespaceRe.ReplaceAllString(report.Description, " "))
+		description := strings.TrimSpace(whitespacePattern.ReplaceAllString(report.Description, " "))
 
 		amountStr := strings.ReplaceAll(report.Amount, ",", "")
 		amount, err := strconv.ParseFloat(amountStr, 64)
@@ -101,11 +90,15 @@ func (p *RytProvider) toActualReports(ctx context.Context, logger *slog.Logger, 
 			continue
 		}
 
+		if !report.IsCredit {
+			amount = -amount
+		}
+
 		categoryGroup, category := p.matchCategory(description)
 
 		result = append(result, models.ActualBudgetReport{
 			Account:       accountName,
-			Date:          parsedDate.Format("2006-01-02"),
+			Date:          report.TransDate,
 			Payee:         "",
 			Notes:         description,
 			CategoryGroup: categoryGroup,
@@ -117,6 +110,6 @@ func (p *RytProvider) toActualReports(ctx context.Context, logger *slog.Logger, 
 	return result
 }
 
-func (p *RytProvider) ExtractionMethod() pdfutil.ExtractionMethod {
-	return pdfutil.ExtractionMethodDigital
+func (p *HLBProvider) ExtractionMethod() pdfutil.ExtractionMethod {
+	return pdfutil.ExtractionMethodPdftotext
 }

@@ -16,6 +16,7 @@
     { id: "tng", label: "TNG E-wallet" },
     { id: "ryt", label: "RYT Bank" },
     { id: "hsbccredit", label: "HSBC Credit Card" },
+    { id: "hlbcredit", label: "HLB Credit Card" },
   ];
   let fileInput = $state(null);
 

@@ -6,6 +6,7 @@ __debug_bin*
 doc/openapi.json
 cmd/app/doc/openapi.json
 
+app
 app.exe
 
 frontend/dist/
