@@ -97,7 +97,7 @@ func parseTransactionLine(line string, stmtDate time.Time) (UOBReport, error) {
 	dateStr := strings.TrimSpace(matches[1])
 	description := strings.TrimSpace(matches[2])
 	amount := strings.ReplaceAll(strings.TrimSpace(matches[3]), ",", "")
-	isCredit := matches[4] == "CR" || matches[4] == "cr"
+	isCredit := matches[4] == "CR"
 
 	transDate := dateutil.FormatDate(dateStr, stmtDate)
 
@@ -139,13 +139,6 @@ func extractAccountName(text string) string {
 
 	slog.Debug("card number not found in UOB text")
 	return "UOB Credit Card"
-}
-
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
 }
 
 // Compile-time check: UOBProvider implements Provider.
