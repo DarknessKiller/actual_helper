@@ -63,6 +63,20 @@
       "account_mappings": {
         "HSBC Credit Card": "Current"
       }
+    },
+    "hlbcredit": {
+      "account_mappings": {
+        "1234 5678 9012 3456": "HLB Credit Card"
+      },
+      "exclude_keywords": [],
+      "include_keywords": [],
+      "categories": [
+        {
+          "keyword": "grab",
+          "group": "Food & Dining",
+          "category": "Delivery"
+        }
+      ]
     }
   }
 }
