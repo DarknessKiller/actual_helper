@@ -68,6 +68,13 @@ func (p *RytProvider) ParsePDFText(ctx context.Context, text string) ([]models.A
 func (p *RytProvider) toActualReports(ctx context.Context, logger *slog.Logger, reports []RytReport, accountName string) []models.ActualBudgetReport {
 	var result []models.ActualBudgetReport
 
+	// Apply account mapping once before the loop
+	if p.accountMapping != nil {
+		if mapped, ok := p.accountMapping[accountName]; ok {
+			accountName = mapped
+		}
+	}
+
 	for _, report := range reports {
 		if strings.Contains(strings.ToLower(report.Description), "opening balance") {
 			logger.DebugContext(ctx, "row skipped: opening balance", "description", report.Description)
@@ -95,12 +102,6 @@ func (p *RytProvider) toActualReports(ctx context.Context, logger *slog.Logger, 
 		}
 
 		categoryGroup, category := p.matchCategory(description)
-
-		if p.accountMapping != nil {
-			if mapped, ok := p.accountMapping[accountName]; ok {
-				accountName = mapped
-			}
-		}
 
 		result = append(result, models.ActualBudgetReport{
 			Account:       accountName,
