@@ -8,20 +8,12 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"time"
 
 	"actual_helper/internal/models"
 	"actual_helper/internal/pdfutil"
 	"actual_helper/internal/providers"
 	"actual_helper/internal/rule"
 )
-
-var monthNames = map[string]time.Month{
-	"JAN": time.January, "FEB": time.February, "MAR": time.March,
-	"APR": time.April, "MAY": time.May, "JUN": time.June,
-	"JUL": time.July, "AUG": time.August, "SEP": time.September,
-	"OCT": time.October, "NOV": time.November, "DEC": time.December,
-}
 
 type HSBCProvider struct {
 	engine         *rule.Engine
@@ -77,6 +69,13 @@ var whitespacePattern = regexp.MustCompile(`\s+`)
 func (p *HSBCProvider) toActualReports(ctx context.Context, logger *slog.Logger, reports []HSBCReport, accountName string) []models.ActualBudgetReport {
 	var result []models.ActualBudgetReport
 
+	// Apply account mapping once before the loop
+	if p.accountMapping != nil {
+		if mapped, ok := p.accountMapping[accountName]; ok {
+			accountName = mapped
+		}
+	}
+
 	for _, report := range reports {
 		if p.shouldSkip(report.Description) {
 			logger.DebugContext(ctx, "row skipped: filtered description", "description", report.Description)
@@ -98,15 +97,9 @@ func (p *HSBCProvider) toActualReports(ctx context.Context, logger *slog.Logger,
 
 		categoryGroup, category := p.matchCategory(description)
 
-		if p.accountMapping != nil {
-			if mapped, ok := p.accountMapping[accountName]; ok {
-				accountName = mapped
-			}
-		}
-
 		result = append(result, models.ActualBudgetReport{
 			Account:       accountName,
-			Date:          report.PostDate,
+			Date:          report.TransDate,
 			Payee:         "",
 			Notes:         description,
 			CategoryGroup: categoryGroup,
