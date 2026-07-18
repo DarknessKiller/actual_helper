@@ -67,6 +67,18 @@ Configuration is checked on every request by comparing the config file's mtime. 
 | **Date format** | `DD MMM` (year inferred from statement header; cross-year boundary handled) |
 | **Special handling** | Summary rows (previous balance, credit limit, charges) are automatically skipped; OCR fallback for scanned/image-based statements |
 
+### HLB Credit Card
+
+| | |
+|---|---|
+| **Provider name** | `hlbcredit` |
+| **File formats** | PDF only (digital extraction via pdftotext) |
+| **Credit detection** | Amount suffixed with `CR` (e.g., `45.90 CR`) |
+| **Debit detection** | Plain positive amount (e.g., `19.05`) |
+| **Date format** | `DD MMM` (year inferred from statement date; cross-year boundary handled) |
+| **Statement date format** | `DD MMM YYYY` (e.g., `14 JUL 2026`) |
+| **Special handling** | Summary rows (previous balance, charges, subtotal) are automatically skipped |
+
 ### Adding a New Provider
 
 1. Create a new package under `internal/providers/<name>/`
@@ -76,10 +88,11 @@ Configuration is checked on every request by comparing the config file's mtime. 
        Name() string
        ParseCSV(ctx context.Context, r io.Reader) ([]models.ActualBudgetReport, error)
        ParsePDFText(ctx context.Context, text string) ([]models.ActualBudgetReport, error)
+       ExtractionMethod() pdfutil.ExtractionMethod
    }
    ```
 3. Implement `ConfigurableProvider` if the provider supports config-driven filtering/categorization
-4. Register the provider in `internal/bootstrap/bootstrap.go`
+4. Register the provider in `cmd/app/main.go`
 
 ---
 
@@ -141,6 +154,14 @@ Set the `PROVIDER_CONFIG_PATH` environment variable to point to a JSON configura
       "categories": [
         { "keyword": "shopee", "group": "Shopping", "category": "Online" }
       ]
+    },
+    "hlbcredit": {
+      "account_mappings": { "1234 5678 9012 3456": "HLB Credit Card" },
+      "exclude_keywords": [],
+      "include_keywords": [],
+      "categories": [
+        { "keyword": "grab", "group": "Food & Dining", "category": "Delivery" }
+      ]
     }
   }
 }
@@ -178,6 +199,6 @@ Each package has its own test suite covering success paths, failure paths, and e
 | **Language** | Go 1.26 |
 | **Web framework** | [Fuego](https://github.com/go-fuego/fuego) |
 | **Testing** | Ginkgo v2, Gomega, httptest |
-| **PDF extraction** | ledongthuc/pdf (digital), tesseract + gosseract (OCR fallback) |
+| **PDF extraction** | ledongthuc/pdf (digital), pdftotext (text extraction), tesseract + gosseract (OCR fallback) |
 | **PDF decryption** | pdfcpu |
 | **PDF rendering** | poppler-utils (pdftoppm) |

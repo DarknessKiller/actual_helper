@@ -71,6 +71,13 @@ func (p *TNGProvider) ParseCSV(_ context.Context, _ io.Reader) ([]models.ActualB
 func (p *TNGProvider) toActualReports(ctx context.Context, logger *slog.Logger, reports []TNGReport, accountName string) []models.ActualBudgetReport {
 	var result []models.ActualBudgetReport
 
+	// Apply account mapping once before the loop
+	if p.accountMapping != nil {
+		if mapped, ok := p.accountMapping[accountName]; ok {
+			accountName = mapped
+		}
+	}
+
 	for _, report := range reports {
 		if report.Status != "Success" {
 			logger.DebugContext(ctx, "row skipped: non-success status", "status", report.Status)
@@ -101,12 +108,6 @@ func (p *TNGProvider) toActualReports(ctx context.Context, logger *slog.Logger, 
 		}
 
 		categoryGroup, category := p.matchCategory(description)
-
-		if p.accountMapping != nil {
-			if mapped, ok := p.accountMapping[accountName]; ok {
-				accountName = mapped
-			}
-		}
 
 		result = append(result, models.ActualBudgetReport{
 			Account:       accountName,

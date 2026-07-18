@@ -8,6 +8,7 @@ import (
 	"actual_helper/internal/bootstrap"
 	"actual_helper/internal/config"
 	"actual_helper/internal/handlers"
+	hlbcreditprov "actual_helper/internal/providers/hlbcredit"
 	hsbccreditprov "actual_helper/internal/providers/hsbccredit"
 	rytprov "actual_helper/internal/providers/ryt"
 	tngprov "actual_helper/internal/providers/tng"
@@ -22,6 +23,7 @@ func main() {
 		"tng":        tngprov.New,
 		"ryt":        rytprov.New,
 		"hsbccredit": hsbccreditprov.New,
+		"hlbcredit":  hlbcreditprov.New,
 	})
 
 	server := config.NewFuegoServer(env)

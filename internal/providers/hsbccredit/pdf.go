@@ -4,9 +4,10 @@ import (
 	"errors"
 	"log/slog"
 	"regexp"
-	"strconv"
 	"strings"
 	"time"
+
+	"actual_helper/internal/dateutil"
 )
 
 var summaryPrefixes = []string{
@@ -31,7 +32,7 @@ func parseTransactions(text string) ([]HSBCReport, error) {
 	stmtDateStr := extractStatementDate(lines)
 	if stmtDateStr == "" {
 		slog.Warn("statement date not found in text",
-			"text_preview", truncate(text, 400),
+			"text_preview", dateutil.Truncate(text, 400),
 		)
 		return nil, errors.New("statement date not found")
 	}
@@ -45,7 +46,7 @@ func parseTransactions(text string) ([]HSBCReport, error) {
 	dataStart := findTransactionStart(lines)
 	if dataStart == -1 {
 		slog.Info("no transaction section found in text",
-			"text_preview", truncate(text, 400),
+			"text_preview", dateutil.Truncate(text, 400),
 		)
 		return nil, nil
 	}
@@ -78,7 +79,7 @@ func parseTransactions(text string) ([]HSBCReport, error) {
 func extractAccountName(text string) string {
 	idx := strings.Index(text, "Card Number")
 	if idx == -1 {
-		slog.Debug("card number marker not found", "preview", truncate(text, 600))
+		slog.Debug("card number marker not found", "preview", dateutil.Truncate(text, 600))
 		return "HSBC Credit Card"
 	}
 
@@ -90,7 +91,7 @@ func extractAccountName(text string) string {
 		return matches
 	}
 
-	slog.Debug("card number not found after 'Card Number'", "preview", truncate(after, 600))
+	slog.Debug("card number not found after 'Card Number'", "preview", dateutil.Truncate(after, 600))
 	return "HSBC Credit Card"
 }
 
@@ -141,14 +142,19 @@ func parseTransactionLine(line string, stmtDate time.Time) (HSBCReport, error) {
 		return HSBCReport{}, errors.New("no match")
 	}
 
+	// HSBC format: "Post date | Transaction date | Transaction details | Amount"
+	// matches[1] = Post date, matches[2] = Transaction date
 	postDateStr := matches[1]
+	transDateStr := matches[2]
 	description := strings.TrimSpace(matches[3])
 	amountStr := matches[4]
 	isCredit := matches[5] == "CR"
 
-	postDate := formatDate(postDateStr, stmtDate)
+	transDate := dateutil.FormatDate(transDateStr, stmtDate)
+	postDate := dateutil.FormatDate(postDateStr, stmtDate)
 
 	return HSBCReport{
+		TransDate:   transDate,
 		PostDate:    postDate,
 		Description: description,
 		Amount:      amountStr,
@@ -156,36 +162,3 @@ func parseTransactionLine(line string, stmtDate time.Time) (HSBCReport, error) {
 	}, nil
 }
 
-func formatDate(ddmmm string, stmtDate time.Time) string {
-	parts := strings.SplitN(ddmmm, " ", 2)
-	if len(parts) != 2 {
-		return ddmmm
-	}
-
-	day, err := strconv.Atoi(parts[0])
-	if err != nil {
-		return ddmmm
-	}
-
-	monthNum, ok := monthNames[strings.ToUpper(parts[1])]
-	if !ok {
-		return ddmmm
-	}
-
-	stmtMonth := stmtDate.Month()
-	year := stmtDate.Year()
-
-	if monthNum > stmtMonth {
-		year--
-	}
-
-	t := time.Date(year, monthNum, day, 0, 0, 0, 0, time.UTC)
-	return t.Format("2006-01-02")
-}
-
-func truncate(s string, n int) string {
-	if len(s) <= n {
-		return s
-	}
-	return s[:n] + "..."
-}
