@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"actual_helper/internal/models"
@@ -37,6 +38,7 @@ var creditTransactionTypes = map[TNGTransactionType]struct{}{
 
 type TNGProvider struct {
 	engine         *rule.Engine
+	mu             sync.RWMutex
 	accountMapping map[string]string
 }
 
@@ -49,7 +51,9 @@ func New(excludeKeywords, includeKeywords []string, categories []models.Category
 
 func (p *TNGProvider) Reload(excludeKeywords, includeKeywords []string, categories []models.CategoryRule, accountMappings map[string]string) {
 	p.engine.Reload(excludeKeywords, includeKeywords, categories)
+	p.mu.Lock()
 	p.accountMapping = accountMappings
+	p.mu.Unlock()
 }
 
 func (p *TNGProvider) shouldSkip(description string) bool {
@@ -72,11 +76,13 @@ func (p *TNGProvider) toActualReports(ctx context.Context, logger *slog.Logger, 
 	var result []models.ActualBudgetReport
 
 	// Apply account mapping once before the loop
+	p.mu.RLock()
 	if p.accountMapping != nil {
 		if mapped, ok := p.accountMapping[accountName]; ok {
 			accountName = mapped
 		}
 	}
+	p.mu.RUnlock()
 
 	for _, report := range reports {
 		if report.Status != "Success" {

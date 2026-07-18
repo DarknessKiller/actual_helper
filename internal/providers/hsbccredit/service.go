@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 
 	"actual_helper/internal/models"
 	"actual_helper/internal/pdfutil"
@@ -17,6 +18,7 @@ import (
 
 type HSBCProvider struct {
 	engine         *rule.Engine
+	mu             sync.RWMutex
 	accountMapping map[string]string
 }
 
@@ -29,7 +31,9 @@ func New(excludeKeywords, includeKeywords []string, categories []models.Category
 
 func (p *HSBCProvider) Reload(excludeKeywords, includeKeywords []string, categories []models.CategoryRule, accountMappings map[string]string) {
 	p.engine.Reload(excludeKeywords, includeKeywords, categories)
+	p.mu.Lock()
 	p.accountMapping = accountMappings
+	p.mu.Unlock()
 }
 
 func (p *HSBCProvider) shouldSkip(description string) bool {
@@ -70,11 +74,13 @@ func (p *HSBCProvider) toActualReports(ctx context.Context, logger *slog.Logger,
 	var result []models.ActualBudgetReport
 
 	// Apply account mapping once before the loop
+	p.mu.RLock()
 	if p.accountMapping != nil {
 		if mapped, ok := p.accountMapping[accountName]; ok {
 			accountName = mapped
 		}
 	}
+	p.mu.RUnlock()
 
 	for _, report := range reports {
 		if p.shouldSkip(report.Description) {

@@ -17,6 +17,7 @@
     { id: "ryt", label: "RYT Bank" },
     { id: "hsbccredit", label: "HSBC Credit Card" },
     { id: "hlbcredit", label: "HLB Credit Card" },
+    { id: "uobcredit", label: "UOB Credit Card" },
   ];
   let fileInput = $state(null);
 
