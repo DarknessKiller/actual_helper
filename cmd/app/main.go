@@ -12,6 +12,7 @@ import (
 	hsbccreditprov "actual_helper/internal/providers/hsbccredit"
 	rytprov "actual_helper/internal/providers/ryt"
 	tngprov "actual_helper/internal/providers/tng"
+	uobcreditprov "actual_helper/internal/providers/uobcredit"
 	"actual_helper/internal/ratelimit"
 	"actual_helper/internal/services"
 
@@ -24,6 +25,7 @@ func main() {
 		"ryt":        rytprov.New,
 		"hsbccredit": hsbccreditprov.New,
 		"hlbcredit":  hlbcreditprov.New,
+		"uobcredit":  uobcreditprov.New,
 	})
 
 	server := config.NewFuegoServer(env)
