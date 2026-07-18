@@ -1,4 +1,4 @@
-package hlbcredit
+package uobcredit
 
 import (
 	"context"
@@ -16,44 +16,44 @@ import (
 	"actual_helper/internal/rule"
 )
 
-type HLBProvider struct {
+type UOBProvider struct {
 	engine         *rule.Engine
 	mu             sync.RWMutex
 	accountMapping map[string]string
 }
 
 func New(excludeKeywords, includeKeywords []string, categories []models.CategoryRule, accountMappings map[string]string) providers.Provider {
-	return &HLBProvider{
+	return &UOBProvider{
 		engine:         rule.NewEngine(excludeKeywords, includeKeywords, categories),
 		accountMapping: accountMappings,
 	}
 }
 
-func (p *HLBProvider) Reload(excludeKeywords, includeKeywords []string, categories []models.CategoryRule, accountMappings map[string]string) {
+func (p *UOBProvider) Reload(excludeKeywords, includeKeywords []string, categories []models.CategoryRule, accountMappings map[string]string) {
 	p.engine.Reload(excludeKeywords, includeKeywords, categories)
 	p.mu.Lock()
 	p.accountMapping = accountMappings
 	p.mu.Unlock()
 }
 
-func (p *HLBProvider) shouldSkip(description string) bool {
+func (p *UOBProvider) shouldSkip(description string) bool {
 	return p.engine.ShouldSkip(description)
 }
 
-func (p *HLBProvider) matchCategory(description string) (string, string) {
+func (p *UOBProvider) matchCategory(description string) (string, string) {
 	return p.engine.MatchCategory(description)
 }
 
-func (p *HLBProvider) Name() string {
-	return "hlbcredit"
+func (p *UOBProvider) Name() string {
+	return "uobcredit"
 }
 
-func (p *HLBProvider) ParseCSV(ctx context.Context, r io.Reader) ([]models.ActualBudgetReport, error) {
-	return nil, errors.New("not supported for hlbcredit provider")
+func (p *UOBProvider) ParseCSV(ctx context.Context, r io.Reader) ([]models.ActualBudgetReport, error) {
+	return nil, errors.New("not supported for uobcredit provider")
 }
 
-func (p *HLBProvider) ParsePDFText(ctx context.Context, text string) ([]models.ActualBudgetReport, error) {
-	logger := slog.With("provider", "hlbcredit", "format", "pdf")
+func (p *UOBProvider) ParsePDFText(ctx context.Context, text string) ([]models.ActualBudgetReport, error) {
+	logger := slog.With("provider", "uobcredit", "format", "pdf")
 
 	accountName := extractAccountName(text)
 	reports, err := parseTransactions(text)
@@ -70,7 +70,7 @@ func (p *HLBProvider) ParsePDFText(ctx context.Context, text string) ([]models.A
 
 var whitespacePattern = regexp.MustCompile(`\s+`)
 
-func (p *HLBProvider) toActualReports(ctx context.Context, logger *slog.Logger, reports []HLBReport, accountName string) []models.ActualBudgetReport {
+func (p *UOBProvider) toActualReports(ctx context.Context, logger *slog.Logger, reports []UOBReport, accountName string) []models.ActualBudgetReport {
 	var result []models.ActualBudgetReport
 
 	p.mu.RLock()
@@ -116,6 +116,6 @@ func (p *HLBProvider) toActualReports(ctx context.Context, logger *slog.Logger, 
 	return result
 }
 
-func (p *HLBProvider) ExtractionMethod() pdfutil.ExtractionMethod {
+func (p *UOBProvider) ExtractionMethod() pdfutil.ExtractionMethod {
 	return pdfutil.ExtractionMethodPdftotext
 }
