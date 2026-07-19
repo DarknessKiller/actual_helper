@@ -141,6 +141,9 @@ func (p *TNGProvider) ParsePDFText(ctx context.Context, text string) ([]models.A
 
 	result := p.toActualReports(ctx, logger, reports, "")
 	logger.InfoContext(ctx, "pdf parsing complete", "parsed_count", len(result))
+	if len(result) == 0 {
+		return nil, errors.New("no transactions found after filtering")
+	}
 	return result, nil
 }
 

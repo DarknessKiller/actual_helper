@@ -1,6 +1,7 @@
 package dateutil
 
 import (
+	"errors"
 	"strconv"
 	"strings"
 	"time"
@@ -15,20 +16,20 @@ var monthNames = map[string]time.Month{
 }
 
 // FormatDate converts "DD MMM" to "YYYY-MM-DD", inferring year from stmtDate.
-func FormatDate(ddmmm string, stmtDate time.Time) string {
+func FormatDate(ddmmm string, stmtDate time.Time) (string, error) {
 	parts := strings.SplitN(ddmmm, " ", 2)
 	if len(parts) != 2 {
-		return ddmmm
+		return "", errors.New("invalid date format: " + ddmmm)
 	}
 
 	day, err := strconv.Atoi(parts[0])
 	if err != nil {
-		return ddmmm
+		return "", errors.New("invalid day in date: " + ddmmm)
 	}
 
 	monthNum, ok := monthNames[strings.ToUpper(parts[1])]
 	if !ok {
-		return ddmmm
+		return "", errors.New("unknown month in date: " + ddmmm)
 	}
 
 	stmtMonth := stmtDate.Month()
@@ -39,7 +40,7 @@ func FormatDate(ddmmm string, stmtDate time.Time) string {
 	}
 
 	t := time.Date(year, monthNum, day, 0, 0, 0, 0, time.UTC)
-	return t.Format("2006-01-02")
+	return t.Format("2006-01-02"), nil
 }
 
 // Truncate truncates string s to n characters, appending "..." if truncated.

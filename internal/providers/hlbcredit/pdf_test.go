@@ -71,13 +71,12 @@ TOTAL BALANCE                                                                   
 		Expect(err).To(HaveOccurred())
 	})
 
-	It("returns empty for text with header but no transactions", func() {
+	It("returns error for text with header but no transactions", func() {
 		text := `Tarikh Penyata                    14 JUL 2026
 NEW TRANSACTION / CHARGES`
 
-		reports, err := provider.ParsePDFText(ctx, text)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(reports).To(BeEmpty())
+		_, err := provider.ParsePDFText(ctx, text)
+		Expect(err).To(MatchError("no transactions found after filtering"))
 	})
 
 	It("handles year boundary: December transaction on January statement", func() {

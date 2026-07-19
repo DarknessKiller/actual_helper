@@ -124,7 +124,7 @@ Dockerfile changes:
 - Multiple transactions
 - Summary lines skipped
 - Missing statement date → error
-- Header with no transactions → empty result
+- Header with no transactions → error
 - Year boundary (Dec on Jan statement) → correct year assignment
 - Exclude keyword filtering
 - Category matching

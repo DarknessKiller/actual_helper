@@ -79,6 +79,19 @@ Configuration is checked on every request by comparing the config file's mtime. 
 | **Statement date format** | `DD MMM YYYY` (e.g., `14 JUL 2026`) |
 | **Special handling** | Summary rows (previous balance, charges, subtotal) are automatically skipped |
 
+### GX Bank
+
+| | |
+|---|---|
+| **Provider name** | `gxbank` |
+| **File formats** | PDF only (digital extraction via ledongthuc/pdf) |
+| **Credit detection** | Amount prefixed with `+` (e.g., `+100.00`) |
+| **Debit detection** | Amount prefixed with `-` (e.g., `-50.00`) |
+| **Date format** | `d Month YYYY` (e.g., `1 May 2026`) |
+| **Account types** | GX Savings Account, Pocket |
+| **Account name mapping** | Configurable via `account_mappings` in provider config |
+| **Special handling** | Opening balance rows are automatically skipped; account name extracted from PDF header |
+
 ### Adding a New Provider
 
 1. Create a new package under `internal/providers/<name>/`
@@ -161,6 +174,19 @@ Set the `PROVIDER_CONFIG_PATH` environment variable to point to a JSON configura
       "include_keywords": [],
       "categories": [
         { "keyword": "grab", "group": "Food & Dining", "category": "Delivery" }
+      ]
+    },
+    "gxbank": {
+      "account_mappings": {
+        "GX Savings Account": "GX Savings",
+        "Secret stash Bonus Pocket": "GX Pocket"
+      },
+      "exclude_keywords": [],
+      "include_keywords": [],
+      "categories": [
+        { "keyword": "interest earned", "group": "Income", "category": "Interest" },
+        { "keyword": "duitnow", "group": "Transfer", "category": "DuitNow" },
+        { "keyword": "pocket", "group": "Transfer", "category": "Pocket" }
       ]
     }
   }

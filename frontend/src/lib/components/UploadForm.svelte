@@ -18,6 +18,7 @@
     { id: "hsbccredit", label: "HSBC Credit Card" },
     { id: "hlbcredit", label: "HLB Credit Card" },
     { id: "uobcredit", label: "UOB Credit Card" },
+    { id: "gxbank", label: "GX Bank" },
   ];
   let fileInput = $state(null);
 

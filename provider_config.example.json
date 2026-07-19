@@ -91,6 +91,31 @@
           "category": "Delivery"
         }
       ]
+    },
+    "gxbank": {
+      "account_mappings": {
+        "GX Savings Account": "GX Savings",
+        "Secret stash Bonus Pocket": "GX Pocket"
+      },
+      "exclude_keywords": [],
+      "include_keywords": [],
+      "categories": [
+        {
+          "keyword": "interest earned",
+          "group": "Income",
+          "category": "Interest"
+        },
+        {
+          "keyword": "duitnow",
+          "group": "Transfer",
+          "category": "DuitNow"
+        },
+        {
+          "keyword": "pocket",
+          "group": "Transfer",
+          "category": "Pocket"
+        }
+      ]
     }
   }
 }

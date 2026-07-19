@@ -99,7 +99,10 @@ func parseTransactionLine(line string, stmtDate time.Time) (UOBReport, error) {
 	amount := strings.ReplaceAll(strings.TrimSpace(matches[3]), ",", "")
 	isCredit := matches[4] == "CR"
 
-	transDate := dateutil.FormatDate(dateStr, stmtDate)
+	transDate, err := dateutil.FormatDate(dateStr, stmtDate)
+	if err != nil {
+		return UOBReport{}, err
+	}
 
 	return UOBReport{
 		TransDate:   transDate,
