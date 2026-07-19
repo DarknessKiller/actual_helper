@@ -65,6 +65,9 @@ func (p *HSBCProvider) ParsePDFText(ctx context.Context, text string) ([]models.
 
 	result := p.toActualReports(ctx, logger, reports, accountName)
 	logger.InfoContext(ctx, "pdf parsing complete", "parsed_count", len(result))
+	if len(result) == 0 {
+		return nil, errors.New("no transactions found after filtering")
+	}
 	return result, nil
 }
 

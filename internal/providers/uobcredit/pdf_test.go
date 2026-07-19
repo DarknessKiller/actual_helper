@@ -71,12 +71,11 @@ MINIMUM PAYMENT DUE                                                             
 		Expect(err).To(HaveOccurred())
 	})
 
-	It("returns empty for text with header but no transactions", func() {
+	It("returns error for text with header but no transactions", func() {
 		text := `Statement Date    16 JUL 2026`
 
-		reports, err := provider.ParsePDFText(ctx, text)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(reports).To(BeEmpty())
+		_, err := provider.ParsePDFText(ctx, text)
+		Expect(err).To(MatchError("no transactions found after filtering"))
 	})
 
 	It("handles year boundary: December transaction on January statement", func() {

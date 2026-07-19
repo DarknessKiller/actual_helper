@@ -9,5 +9,7 @@ cmd/app/doc/openapi.json
 app
 app.exe
 
+cmd/e2e/
+
 frontend/dist/
 frontend/node_modules/

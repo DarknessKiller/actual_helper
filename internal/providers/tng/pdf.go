@@ -8,9 +8,9 @@ import (
 )
 
 var (
-	dateRe           = regexp.MustCompile(`(?m)^(\d{1,2}/\d{1,2}/\d{4})\s+(Success|Failed)\s+`)
-	amountRe         = regexp.MustCompile(`RM(\d+[.,]?\d*\.\d{2})`)
-	whitespaceRe     = regexp.MustCompile(`\s+`)
+	dateRe       = regexp.MustCompile(`(?m)^(\d{1,2}/\d{1,2}/\d{4})\s+(Success|Failed)\s+`)
+	amountRe     = regexp.MustCompile(`RM(\d+[.,]?\d*\.\d{2})`)
+	whitespaceRe = regexp.MustCompile(`\s+`)
 )
 
 func parsePDFBlocks(text string) ([]TNGReport, error) {
@@ -26,10 +26,7 @@ func parsePDFBlocks(text string) ([]TNGReport, error) {
 
 	splits := dateRe.FindAllStringSubmatchIndex(body, -1)
 	if len(splits) == 0 {
-		slog.Info("no transaction blocks found in pdf body",
-			"body", truncate(body, 600),
-		)
-		return nil, nil
+		return nil, errors.New("no transaction blocks found in pdf body")
 	}
 
 	var reports []TNGReport
@@ -98,8 +95,6 @@ func parseBlock(block string) (TNGReport, error) {
 		Amount:          amount,
 	}, nil
 }
-
-
 
 func trimAtReference(text string) string {
 	tokens := strings.Fields(text)
@@ -186,5 +181,3 @@ func truncate(s string, n int) string {
 	}
 	return s[:n] + "..."
 }
-
-

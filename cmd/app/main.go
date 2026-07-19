@@ -8,6 +8,7 @@ import (
 	"actual_helper/internal/bootstrap"
 	"actual_helper/internal/config"
 	"actual_helper/internal/handlers"
+	gxbankprov "actual_helper/internal/providers/gxbank"
 	hlbcreditprov "actual_helper/internal/providers/hlbcredit"
 	hsbccreditprov "actual_helper/internal/providers/hsbccredit"
 	rytprov "actual_helper/internal/providers/ryt"
@@ -25,6 +26,7 @@ func main() {
 		"ryt":        rytprov.New,
 		"hsbccredit": hsbccreditprov.New,
 		"hlbcredit":  hlbcreditprov.New,
+		"gxbank":     gxbankprov.New,
 		"uobcredit":  uobcreditprov.New,
 	})
 

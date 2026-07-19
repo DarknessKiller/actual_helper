@@ -45,10 +45,7 @@ func parseBlocks(text string) ([]RytReport, error) {
 	// Find last column header (Baki = balance) to know where data starts
 	balanceHeaderIdx := findBalanceHeader(body)
 	if balanceHeaderIdx == -1 {
-		slog.Info("no column headers found in pdf body",
-			"body_preview", truncate(body, 400),
-		)
-		return nil, nil
+		return nil, errors.New("no column headers found in pdf body")
 	}
 
 	dataStart := balanceHeaderIdx + len("Baki")
@@ -57,18 +54,12 @@ func parseBlocks(text string) ([]RytReport, error) {
 	}
 	data := strings.TrimSpace(body[dataStart:])
 	if data == "" {
-		slog.Info("empty data section after balance header",
-			"body_around_header", truncate(body[max(0, balanceHeaderIdx-50):min(len(body), balanceHeaderIdx+100)], 150),
-		)
-		return nil, nil
+		return nil, errors.New("empty data section after balance header")
 	}
 
 	splits := dateRe.FindAllStringSubmatchIndex(data, -1)
 	if len(splits) == 0 {
-		slog.Info("no transaction blocks found in pdf data",
-			"data", truncate(data, 600),
-		)
-		return nil, nil
+		return nil, errors.New("no transaction blocks found in pdf data")
 	}
 
 	var reports []RytReport
