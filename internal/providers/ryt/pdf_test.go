@@ -142,7 +142,7 @@ Ref. ID: F20260502MNOPQR3
 		Expect(err).To(HaveOccurred())
 	})
 
-	It("returns empty for text with header but no transactions", func() {
+	It("returns error for text with header but no transactions", func() {
 		text := `Account Transactions / Transaksi Akaun
 Main Account / Akaun Utama
 Date
@@ -156,8 +156,7 @@ Amaun
 Balance
 Baki`
 
-		reports, err := provider.ParsePDFText(ctx, text)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(reports).To(BeEmpty())
+		_, err := provider.ParsePDFText(ctx, text)
+		Expect(err).To(HaveOccurred())
 	})
 })

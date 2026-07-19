@@ -131,11 +131,10 @@ RM150.00`
 		Expect(err).To(HaveOccurred())
 	})
 
-	It("returns empty for text with header but no transactions", func() {
+	It("returns error for text with header but no transactions", func() {
 		text := `TNG WALLET TRANSACTION`
-		reports, err := provider.ParsePDFText(ctx, text)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(reports).To(BeEmpty())
+		_, err := provider.ParsePDFText(ctx, text)
+		Expect(err).To(MatchError("no transaction blocks found in pdf body"))
 	})
 
 	It("handles date with single-digit day", func() {

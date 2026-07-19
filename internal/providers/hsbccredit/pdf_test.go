@@ -82,13 +82,12 @@ Your statement balance 259.72`
 		Expect(err).To(HaveOccurred())
 	})
 
-	It("returns empty for text with header but no transactions", func() {
+	It("returns error for text with header but no transactions", func() {
 		text := `Statement Date 04 Jun 2026
 Post date | Transaction date | Transaction details | Amount (RM)`
 
-		reports, err := provider.ParsePDFText(ctx, text)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(reports).To(BeEmpty())
+		_, err := provider.ParsePDFText(ctx, text)
+		Expect(err).To(MatchError("no transactions found after filtering"))
 	})
 
 	It("handles year boundary: December transaction on January statement", func() {
@@ -173,13 +172,12 @@ Your charge(s) for this month RM259.72`
 		Expect(reports[0].Account).To(Equal("1234 5678 9012 3456"))
 	})
 
-	It("skips zero amount rows", func() {
+	It("returns error when all rows are zero amount", func() {
 		text := `Statement Date 04 Jun 2026
 Post date | Transaction date | Transaction details | Amount (RM)
 06 MAY 05 MAY AP Online Retail 0.00`
 
-		reports, err := provider.ParsePDFText(ctx, text)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(reports).To(BeEmpty())
+		_, err := provider.ParsePDFText(ctx, text)
+		Expect(err).To(MatchError("no transactions found after filtering"))
 	})
 })

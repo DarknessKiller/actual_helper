@@ -45,10 +45,7 @@ func parseTransactions(text string) ([]HSBCReport, error) {
 
 	dataStart := findTransactionStart(lines)
 	if dataStart == -1 {
-		slog.Info("no transaction section found in text",
-			"text_preview", dateutil.Truncate(text, 400),
-		)
-		return nil, nil
+		return nil, errors.New("no transaction section found in text")
 	}
 
 	var reports []HSBCReport
@@ -150,8 +147,14 @@ func parseTransactionLine(line string, stmtDate time.Time) (HSBCReport, error) {
 	amountStr := matches[4]
 	isCredit := matches[5] == "CR"
 
-	transDate := dateutil.FormatDate(transDateStr, stmtDate)
-	postDate := dateutil.FormatDate(postDateStr, stmtDate)
+	transDate, err := dateutil.FormatDate(transDateStr, stmtDate)
+	if err != nil {
+		return HSBCReport{}, err
+	}
+	postDate, err := dateutil.FormatDate(postDateStr, stmtDate)
+	if err != nil {
+		return HSBCReport{}, err
+	}
 
 	return HSBCReport{
 		TransDate:   transDate,
@@ -161,4 +164,3 @@ func parseTransactionLine(line string, stmtDate time.Time) (HSBCReport, error) {
 		IsCredit:    isCredit,
 	}, nil
 }
-
