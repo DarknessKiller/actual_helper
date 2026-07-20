@@ -13,6 +13,7 @@ import (
 	"actual_helper/internal/models"
 	"actual_helper/internal/pdfutil"
 	"actual_helper/internal/providers"
+	"actual_helper/internal/providers/cardutil"
 	"actual_helper/internal/rule"
 )
 
@@ -77,11 +78,7 @@ func (p *UOBProvider) toActualReports(ctx context.Context, logger *slog.Logger, 
 	var result []models.ActualBudgetReport
 
 	p.mu.RLock()
-	if p.accountMapping != nil {
-		if mapped, ok := p.accountMapping[accountName]; ok {
-			accountName = mapped
-		}
-	}
+	accountName = cardutil.ApplyMapping(p.accountMapping, accountName)
 	p.mu.RUnlock()
 
 	for _, report := range reports {
