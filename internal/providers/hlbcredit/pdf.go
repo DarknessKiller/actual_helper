@@ -8,11 +8,12 @@ import (
 	"time"
 
 	"actual_helper/internal/dateutil"
+	"actual_helper/internal/providers/cardutil"
 )
 
 var (
 	statementDateRe   = regexp.MustCompile(`(?:Tarikh Penyata|Statement Date)\s+(\d{2} \w{3} \d{4})`)
-	cardNumberRe      = regexp.MustCompile(`(\d{4}[\s-]*\d{4}[\s-]*\d{4}[\s-]*\d{4})`)
+
 	transactionLineRe = regexp.MustCompile(`^\s*(\d{2} \w{3})\s+(\d{2} \w{3})\s+(.+?)\s{2,}([\d,.]+)\s*(CR)?$`)
 	skipPatterns      = []string{
 		"PREVIOUS BALANCE FROM LAST STATEMENT",
@@ -67,22 +68,7 @@ func extractStatementDate(lines []string) string {
 }
 
 func extractAccountName(text string) string {
-	idx := strings.Index(text, "Credit Card Number")
-	if idx == -1 {
-		slog.Debug("card number marker not found in HLB text", "preview", dateutil.Truncate(text, 600))
-		return "HLB Credit Card"
-	}
-
-	after := text[idx+len("Credit Card Number"):]
-	after = strings.ReplaceAll(after, "\n", " ")
-	after = strings.ReplaceAll(after, "-", " ")
-
-	if matches := cardNumberRe.FindString(after); matches != "" {
-		return matches
-	}
-
-	slog.Debug("card number not found after 'Credit Card Number'", "preview", dateutil.Truncate(after, 600))
-	return "HLB Credit Card"
+	return cardutil.ExtractAfterMarker(text, "Credit Card Number", "HLB Credit Card")
 }
 
 func shouldSkipLine(line string) bool {
