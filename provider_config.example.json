@@ -61,12 +61,12 @@
     },
     "hsbccredit": {
       "account_mappings": {
-        "HSBC Credit Card": "Current"
+        "1234 5678 9012 3456": "HSBC Credit Card"
       }
     },
     "hlbcredit": {
       "account_mappings": {
-        "HLB Credit Card": "HLB Credit"
+        "1234 5678 9012 3456": "HLB Credit Card"
       },
       "exclude_keywords": [],
       "include_keywords": [],
@@ -80,7 +80,7 @@
     },
     "uobcredit": {
       "account_mappings": {
-        "UOB Credit Card": "UOB Credit"
+        "1234-5678-9012-3456": "UOB Credit Card"
       },
       "exclude_keywords": [],
       "include_keywords": [],
