@@ -79,6 +79,19 @@ Configuration is checked on every request by comparing the config file's mtime. 
 | **Statement date format** | `DD MMM YYYY` (e.g., `14 JUL 2026`) |
 | **Special handling** | Summary rows (previous balance, charges, subtotal) are automatically skipped |
 
+### UOB Credit Card
+
+| | |
+|---|---|
+| **Provider name** | `uobcredit` |
+| **File formats** | PDF only (digital extraction via pdftotext) |
+| **Credit detection** | Amount suffixed with `CR` (e.g., `326.76 CR`) |
+| **Debit detection** | Plain positive amount (e.g., `89.00`) |
+| **Date format** | `DD MMM` (year inferred from statement date; cross-year boundary handled) |
+| **Statement date format** | `DD MMM YY` or `DD MMM YYYY` (e.g., `16 JUL 26`) |
+| **Card detection** | Extracts card number from WORLD MASTERCARD / MASTERCARD / VISA areas |
+| **Special handling** | Summary rows (sub-total, minimum payment due, credit limit, previous balance) are automatically skipped |
+
 ### GX Bank
 
 | | |
@@ -105,7 +118,11 @@ Configuration is checked on every request by comparing the config file's mtime. 
    }
    ```
 3. Implement `ConfigurableProvider` if the provider supports config-driven filtering/categorization
-4. Register the provider in `cmd/app/main.go`
+4. For credit card providers, use `internal/providers/cardutil` for card number extraction and account mapping:
+   - `cardutil.ExtractAfterMarker(text, marker, fallback)` — extract card number after a text marker
+   - `cardutil.ExtractNearCardType(text, cardTypes, fallback)` — extract card number near card type indicators
+   - `cardutil.ApplyMapping(mapping, name)` — apply account name mapping from config
+5. Register the provider in `cmd/app/main.go`
 
 ---
 
@@ -175,6 +192,12 @@ Set the `PROVIDER_CONFIG_PATH` environment variable to point to a JSON configura
       "categories": [
         { "keyword": "grab", "group": "Food & Dining", "category": "Delivery" }
       ]
+    },
+    "uobcredit": {
+      "account_mappings": { "1234-5678-9012-3456": "UOB Credit Card" },
+      "exclude_keywords": [],
+      "include_keywords": [],
+      "categories": []
     },
     "gxbank": {
       "account_mappings": {
