@@ -100,7 +100,7 @@ Statement Date    16 JUL 2026
 		reports, err := provider.ParsePDFText(ctx, text)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(reports).To(HaveLen(1))
-		Expect(reports[0].Account).To(Equal("1234-5678-9012-3456"))
+		Expect(reports[0].Account).To(Equal("1234 5678 9012 3456"))
 	})
 
 	It("falls back to UOB Credit Card when card number is masked", func() {

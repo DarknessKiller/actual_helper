@@ -52,7 +52,7 @@ func ExtractNearCardType(text string, cardTypes []string, fallback string) strin
 		area := text[start:end]
 
 		if matches := CardNumberRe.FindString(area); matches != "" {
-			return matches
+			return strings.ReplaceAll(matches, "-", " ")
 		}
 	}
 

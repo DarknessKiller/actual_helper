@@ -194,7 +194,7 @@ Set the `PROVIDER_CONFIG_PATH` environment variable to point to a JSON configura
       ]
     },
     "uobcredit": {
-      "account_mappings": { "1234-5678-9012-3456": "UOB Credit Card" },
+      "account_mappings": { "1234 5678 9012 3456": "UOB Credit Card" },
       "exclude_keywords": [],
       "include_keywords": [],
       "categories": []
