@@ -167,7 +167,7 @@ Set the `PROVIDER_CONFIG_PATH` environment variable to point to a JSON configura
   },
   "providers": {
     "tng": {
-      "account_mappings": { "": "Current" },
+      "account_mappings": { "": "TNG" },
       "exclude_keywords": ["Quick Reload Payment", "Via eWallet to GO+"],
       "include_keywords": ["Daily Interest"],
       "categories": [
@@ -175,7 +175,7 @@ Set the `PROVIDER_CONFIG_PATH` environment variable to point to a JSON configura
       ]
     },
     "ryt": {
-      "account_mappings": { "Savings Account": "Current" }
+      "account_mappings": { "": "RYT" }
     },
     "hsbccredit": {
       "account_mappings": { "1234 5678 9012 3456": "HSBC Credit Card" },

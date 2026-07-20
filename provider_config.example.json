@@ -13,7 +13,7 @@
   "providers": {
     "tng": {
       "account_mappings": {
-        "": "Current"
+        "": "TNG"
       },
       "exclude_keywords": [
         "Quick Reload Payment",
@@ -56,7 +56,7 @@
     },
     "ryt": {
       "account_mappings": {
-        "": "Current"
+        "": "RYT"
       }
     },
     "hsbccredit": {

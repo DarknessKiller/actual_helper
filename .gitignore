@@ -13,3 +13,5 @@ cmd/e2e/
 
 frontend/dist/
 frontend/node_modules/
+
+.worktrees/
