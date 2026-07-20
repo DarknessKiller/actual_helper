@@ -178,7 +178,7 @@ Set the `PROVIDER_CONFIG_PATH` environment variable to point to a JSON configura
       "account_mappings": { "Savings Account": "Current" }
     },
     "hsbccredit": {
-      "account_mappings": { "xxxx xxxx xxxx xxxx": "HSBC XXXX" },
+      "account_mappings": { "1234 5678 9012 3456": "HSBC Credit Card" },
       "exclude_keywords": ["Grab"],
       "include_keywords": [],
       "categories": [
