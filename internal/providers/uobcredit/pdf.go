@@ -9,6 +9,7 @@ import (
 
 	"actual_helper/internal/dateutil"
 	"actual_helper/internal/providers"
+	"actual_helper/internal/providers/cardutil"
 )
 
 var (
@@ -16,8 +17,6 @@ var (
 	statementDateRe = regexp.MustCompile(`Statement Date\s+(\d{2} \w{3} \d{2,4})`)
 	// Transaction line (pdftotext -layout): "04 JUL    PAYMENT REC'D...    326.76 CR"
 	transactionLineRe = regexp.MustCompile(`^\s*(\d{2} \w{3})\s+(.+?)\s{2,}([\d,.]+)\s*(CR)?\s*$`)
-	// Card number: "1234-5678-9012-3456"
-	cardNumberRe = regexp.MustCompile(`\d{4}[\s-]*\d{4}[\s-]*\d{4}[\s-]*\d{4}`)
 )
 
 var skipPatterns = []string{
@@ -113,35 +112,7 @@ func parseTransactionLine(line string, stmtDate time.Time) (UOBReport, error) {
 }
 
 func extractAccountName(text string) string {
-	// Look for card number near card type indicator (WORLD MASTERCARD, VISA, etc.)
-	cardTypeIdx := strings.Index(text, "WORLD MASTERCARD")
-	if cardTypeIdx == -1 {
-		cardTypeIdx = strings.Index(text, "MASTERCARD")
-	}
-	if cardTypeIdx == -1 {
-		cardTypeIdx = strings.Index(text, "VISA")
-	}
-
-	if cardTypeIdx != -1 {
-		// Look in the area around the card type indicator
-		start := cardTypeIdx
-		if start > 50 {
-			start -= 50
-		}
-		end := cardTypeIdx + 200
-		if end > len(text) {
-			end = len(text)
-		}
-		area := text[start:end]
-
-		// Try full card number first
-		if matches := cardNumberRe.FindString(area); matches != "" {
-			return matches
-		}
-	}
-
-	slog.Debug("card number not found in UOB text")
-	return "UOB Credit Card"
+	return cardutil.ExtractNearCardType(text, []string{"WORLD MASTERCARD", "MASTERCARD", "VISA"}, "UOB Credit Card")
 }
 
 // Compile-time check: UOBProvider implements Provider.
