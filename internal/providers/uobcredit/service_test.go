@@ -29,7 +29,7 @@ var _ = Describe("UOBProvider", func() {
 	Describe("ParsePDFText with account mapping", func() {
 		It("maps account name from config using card number", func() {
 			accountMappings := map[string]string{
-				"1234-5678-9012-3456": "UOB Credit",
+				"1234 5678 9012 3456": "UOB Credit",
 			}
 			provider := uobcreditprov.New(nil, nil, nil, accountMappings)
 			text := `WORLD MASTERCARD              1234-5678-9012-3456

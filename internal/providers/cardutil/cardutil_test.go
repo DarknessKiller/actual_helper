@@ -67,7 +67,7 @@ func TestExtractNearCardType(t *testing.T) {
 			text:      "some text WORLD MASTERCARD 1234-5678-9012-3456 more text",
 			cardTypes: []string{"WORLD MASTERCARD", "MASTERCARD", "VISA"},
 			fallback:  "Fallback",
-			want:      "1234-5678-9012-3456",
+			want:      "1234 5678 9012 3456",
 		},
 		{
 			name:      "finds card number near VISA with spaces",
@@ -109,21 +109,21 @@ func TestApplyMapping(t *testing.T) {
 	}{
 		{
 			name:    "maps existing key",
-			mapping: map[string]string{"1234-5678-9012-3456": "My Card"},
-			input:   "1234-5678-9012-3456",
+			mapping: map[string]string{"1234 5678 9012 3456": "My Card"},
+			input:   "1234 5678 9012 3456",
 			want:    "My Card",
 		},
 		{
 			name:    "returns original when key not found",
-			mapping: map[string]string{"1234-5678-9012-3456": "My Card"},
-			input:   "9999-8888-7777-6666",
-			want:    "9999-8888-7777-6666",
+			mapping: map[string]string{"1234 5678 9012 3456": "My Card"},
+			input:   "9999 8888 7777 6666",
+			want:    "9999 8888 7777 6666",
 		},
 		{
 			name:    "returns original when mapping is nil",
 			mapping: nil,
-			input:   "1234-5678-9012-3456",
-			want:    "1234-5678-9012-3456",
+			input:   "1234 5678 9012 3456",
+			want:    "1234 5678 9012 3456",
 		},
 	}
 
