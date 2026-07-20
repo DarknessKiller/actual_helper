@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"actual_helper/internal/dateutil"
+	"actual_helper/internal/providers/cardutil"
 )
 
 var summaryPrefixes = []string{
@@ -21,7 +22,6 @@ var summaryPrefixes = []string{
 
 var (
 	statementDateRe = regexp.MustCompile(`Statement Date\s+(\d{2} \w{3} \d{4})`)
-	cardNumberRe    = regexp.MustCompile(`(\d{4}[\s-]*\d{4}[\s-]*\d{4}[\s-]*\d{4})`)
 	postHeaderRe    = regexp.MustCompile(`(?i)Post date.*Transaction details.*Amount`)
 	transactionRe   = regexp.MustCompile(`^(\d{2} \w{3})\s+(\d{2} \w{3})\s+(.+)\s+([\d,]+\.?\d*)(CR)?\s*$`)
 )
@@ -74,22 +74,7 @@ func parseTransactions(text string) ([]HSBCReport, error) {
 }
 
 func extractAccountName(text string) string {
-	idx := strings.Index(text, "Card Number")
-	if idx == -1 {
-		slog.Debug("card number marker not found", "preview", dateutil.Truncate(text, 600))
-		return "HSBC Credit Card"
-	}
-
-	after := text[idx+len("Card Number"):]
-	after = strings.ReplaceAll(after, "\n", " ")
-	after = strings.ReplaceAll(after, "-", " ")
-
-	if matches := cardNumberRe.FindString(after); matches != "" {
-		return matches
-	}
-
-	slog.Debug("card number not found after 'Card Number'", "preview", dateutil.Truncate(after, 600))
-	return "HSBC Credit Card"
+	return cardutil.ExtractAfterMarker(text, "Card Number", "HSBC Credit Card")
 }
 
 func extractStatementDate(lines []string) string {
