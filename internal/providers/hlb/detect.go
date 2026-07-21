@@ -9,5 +9,11 @@ func DetectFormat(text string) string {
 	if strings.Contains(text, "A/C No") || strings.Contains(text, "No Akaun") {
 		return "debit"
 	}
+	if strings.Contains(text, "Tarikh Penyata") {
+		return "credit"
+	}
+	if strings.Contains(text, "Deposit") && strings.Contains(text, "Withdrawal") {
+		return "debit"
+	}
 	return "unknown"
 }

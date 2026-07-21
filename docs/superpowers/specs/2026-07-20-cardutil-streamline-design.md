@@ -2,7 +2,7 @@
 
 ## Problem
 
-Three credit card providers (`hsbccredit`, `hlbcredit`, `uobcredit`) duplicate:
+Three credit card providers (`hsbccredit`, `hlb`, `uobcredit`) duplicate:
 - `cardNumberRe` — identical regex in each `pdf.go`
 - `extractAccountName` — similar logic with different markers
 - `accountMapping` field + `Reload()` + lookup in `toActualReports` — identical pattern in each `service.go`
@@ -95,7 +95,7 @@ Each provider's `pdf.go` replaces its local `cardNumberRe` and `extractAccountNa
 | Provider | Before | After |
 |---|---|---|
 | `hsbccredit` | local `cardNumberRe`, `extractAccountName` finds "Card Number" marker | `cardutil.ExtractAfterMarker(text, "Card Number", "HSBC Credit Card")` |
-| `hlbcredit` | local `cardNumberRe`, `extractAccountName` finds "Credit Card Number" marker | `cardutil.ExtractAfterMarker(text, "Credit Card Number", "HLB Credit Card")` |
+| `hlb` | local `cardNumberRe`, `extractAccountName` finds "Credit Card Number" marker | `cardutil.ExtractAfterMarker(text, "Credit Card Number", "HLB Credit Card")` |
 | `uobcredit` | local `cardNumberRe`, `extractAccountName` finds card type indicators | `cardutil.ExtractNearCardType(text, []string{"WORLD MASTERCARD", "MASTERCARD", "VISA"}, "UOB Credit Card")` |
 
 Each provider's `service.go` replaces the `accountMapping` lookup block with `cardutil.ApplyMapping(p.accountMapping, accountName)`.
@@ -114,8 +114,8 @@ Each provider's `service.go` replaces the `accountMapping` lookup block with `ca
 | `internal/providers/cardutil/cardutil_test.go` | **New** — tests for shared helpers |
 | `internal/providers/hsbccredit/pdf.go` | Remove local `cardNumberRe`, simplify `extractAccountName` |
 | `internal/providers/hsbccredit/service.go` | Replace accountMapping lookup with `cardutil.ApplyMapping` |
-| `internal/providers/hlbcredit/pdf.go` | Remove local `cardNumberRe`, simplify `extractAccountName` |
-| `internal/providers/hlbcredit/service.go` | Replace accountMapping lookup with `cardutil.ApplyMapping` |
+| `internal/providers/hlb/pdf.go` | Remove local `cardNumberRe`, simplify `extractAccountName` |
+| `internal/providers/hlb/service.go` | Replace accountMapping lookup with `cardutil.ApplyMapping` |
 | `internal/providers/uobcredit/pdf.go` | Remove local `cardNumberRe`, simplify `extractAccountName` |
 | `internal/providers/uobcredit/service.go` | Replace accountMapping lookup with `cardutil.ApplyMapping` |
 

@@ -16,7 +16,7 @@ var _ = Describe("ParsePDFText", func() {
 		ctx      = context.Background()
 	)
 
-	It("parses a debit transaction", func() {
+	It("parses a credit transaction with negative amount", func() {
 		text := `Tarikh Penyata                    14 JUL 2026
   15 JUN          16 JUN      STORE-ABC          KOTA LAMA                                                                     25.00`
 

@@ -6,7 +6,7 @@ Add a new provider for Hong Leong Bank (HLB) Credit Card statements. Parses PDF 
 
 ## Provider Name
 
-`hlbcredit`
+`hlb`
 
 ## Extraction Method
 
@@ -76,7 +76,7 @@ Result: `YYYY-MM-DD`
 
 ## Files to Create
 
-### `internal/providers/hlbcredit/service.go`
+### `internal/providers/hlb/service.go`
 
 Provider struct implementing `providers.Provider` and `providers.ConfigurableProvider`:
 
@@ -88,13 +88,13 @@ type HLBProvider struct {
 ```
 
 Methods:
-- `Name() string` → `"hlbcredit"`
+- `Name() string` → `"hlb"`
 - `ParseCSV(ctx, reader)` → returns error (PDF only)
 - `ParsePDFText(ctx, text)` → parses transactions, returns `[]ActualBudgetReport`
 - `ExtractionMethod()` → `pdfutil.ExtractionMethodPdftotext`
 - `Reload(...)` → updates engine and account mapping
 
-### `internal/providers/hlbcredit/pdf.go`
+### `internal/providers/hlb/pdf.go`
 
 Pure parsing functions:
 - `parseTransactions(text string) ([]HLBReport, error)`
@@ -102,7 +102,7 @@ Pure parsing functions:
 - `extractAccountName(text string) string`
 - `parseTransactionLine(line string, stmtDate time.Time) (HLBReport, error)`
 
-### `internal/providers/hlbcredit/report.go`
+### `internal/providers/hlb/report.go`
 
 ```go
 type HLBReport struct {
@@ -116,7 +116,7 @@ type HLBReport struct {
 
 ### Test Files
 
-- `hlbcredit_suite_test.go` — Ginkgo bootstrap
+- `hlb_suite_test.go` — Ginkgo bootstrap
 - `pdf_test.go` — parsing tests (statement date, card number, transactions, credits, debits, year boundary, filtering, categorization)
 - `service_test.go` — provider tests (name, CSV error, account mapping, filtering)
 
@@ -127,10 +127,10 @@ type HLBReport struct {
 Add import and registration:
 
 ```go
-import hlbcreditprov "actual_helper/internal/providers/hlbcredit"
+import hlbprov "actual_helper/internal/providers/hlb"
 
 // In bootstrap.Init:
-"hlbcredit": hlbcreditprov.New,
+"hlb": hlbprov.New,
 ```
 
 ## Config
@@ -146,7 +146,7 @@ Example `provider_config.json`:
 ```json
 {
   "providers": {
-    "hlbcredit": {
+    "hlb": {
       "exclude_keywords": [],
       "include_keywords": [],
       "categories": [

@@ -67,17 +67,19 @@ Configuration is checked on every request by comparing the config file's mtime. 
 | **Date format** | `DD MMM` (year inferred from statement header; cross-year boundary handled) |
 | **Special handling** | Summary rows (previous balance, credit limit, charges) are automatically skipped; OCR fallback for scanned/image-based statements |
 
-### HLB Credit Card
+### HLB (Hong Leong Bank)
 
 | | |
 |---|---|
 | **Provider name** | `hlb` |
 | **File formats** | PDF only (digital extraction via pdftotext) |
-| **Credit detection** | Amount suffixed with `CR` (e.g., `45.90 CR`) |
-| **Debit detection** | Plain positive amount (e.g., `19.05`) |
+| **Statement types** | Credit card and debit account — auto-detected from PDF content |
+| **Credit card detection** | Amount suffixed with `CR` (e.g., `45.90 CR`) |
+| **Credit card debit detection** | Plain positive amount (e.g., `19.05`) |
+| **Debit account detection** | Explicit `+`/`-` prefix in amount |
 | **Date format** | `DD MMM` (year inferred from statement date; cross-year boundary handled) |
 | **Statement date format** | `DD MMM YYYY` (e.g., `14 JUL 2026`) |
-| **Special handling** | Summary rows (previous balance, charges, subtotal) are automatically skipped |
+| **Special handling** | Summary rows (previous balance, charges, subtotal) are automatically skipped; format auto-detected per statement |
 
 ### UOB Credit Card
 
@@ -186,7 +188,10 @@ Set the `PROVIDER_CONFIG_PATH` environment variable to point to a JSON configura
       ]
     },
     "hlb": {
-      "account_mappings": { "1234 5678 9012 3456": "HLB Credit Card" },
+      "account_mappings": {
+        "1234 5678 9012 3456": "HLB Credit Card",
+        "HLB Debit Account": "HLB Savings"
+      },
       "exclude_keywords": [],
       "include_keywords": [],
       "categories": [
