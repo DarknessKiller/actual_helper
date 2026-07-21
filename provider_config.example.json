@@ -64,7 +64,7 @@
         "1234 5678 9012 3456": "HSBC Credit Card"
       }
     },
-    "hlbcredit": {
+    "hlb": {
       "account_mappings": {
         "1234 5678 9012 3456": "HLB Credit Card"
       },

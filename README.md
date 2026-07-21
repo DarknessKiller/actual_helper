@@ -71,7 +71,7 @@ Configuration is checked on every request by comparing the config file's mtime. 
 
 | | |
 |---|---|
-| **Provider name** | `hlbcredit` |
+| **Provider name** | `hlb` |
 | **File formats** | PDF only (digital extraction via pdftotext) |
 | **Credit detection** | Amount suffixed with `CR` (e.g., `45.90 CR`) |
 | **Debit detection** | Plain positive amount (e.g., `19.05`) |
@@ -185,7 +185,7 @@ Set the `PROVIDER_CONFIG_PATH` environment variable to point to a JSON configura
         { "keyword": "shopee", "group": "Shopping", "category": "Online" }
       ]
     },
-    "hlbcredit": {
+    "hlb": {
       "account_mappings": { "1234 5678 9012 3456": "HLB Credit Card" },
       "exclude_keywords": [],
       "include_keywords": [],
