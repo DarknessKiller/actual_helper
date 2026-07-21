@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Extract duplicated card number regex, account name extraction, and account mapping logic into a shared `cardutil` package, reducing duplication across `hsbccredit`, `hlbcredit`, and `uobcredit` providers.
+**Goal:** Extract duplicated card number regex, account name extraction, and account mapping logic into a shared `cardutil` package, reducing duplication across `hsbccredit`, `hlb`, and `uobcredit` providers.
 
 **Architecture:** New `internal/providers/cardutil` package with three helpers: `ExtractAfterMarker`, `ExtractNearCardType`, `ApplyMapping`. Each provider's `pdf.go` delegates to cardutil instead of duplicating regex and extraction logic. Each provider's `service.go` uses `cardutil.ApplyMapping` instead of inline mapping lookup.
 
@@ -26,8 +26,8 @@
 | `internal/providers/cardutil/cardutil_test.go` | Create | Tests for shared helpers |
 | `internal/providers/hsbccredit/pdf.go` | Modify | Remove local `cardNumberRe`, simplify `extractAccountName` |
 | `internal/providers/hsbccredit/service.go` | Modify | Replace mapping lookup with `cardutil.ApplyMapping` |
-| `internal/providers/hlbcredit/pdf.go` | Modify | Remove local `cardNumberRe`, simplify `extractAccountName` |
-| `internal/providers/hlbcredit/service.go` | Modify | Replace mapping lookup with `cardutil.ApplyMapping` |
+| `internal/providers/hlb/pdf.go` | Modify | Remove local `cardNumberRe`, simplify `extractAccountName` |
+| `internal/providers/hlb/service.go` | Modify | Replace mapping lookup with `cardutil.ApplyMapping` |
 | `internal/providers/uobcredit/pdf.go` | Modify | Remove local `cardNumberRe`, simplify `extractAccountName` |
 | `internal/providers/uobcredit/service.go` | Modify | Replace mapping lookup with `cardutil.ApplyMapping` |
 
@@ -335,11 +335,11 @@ git commit -m "refactor(hsbccredit): use cardutil for card number extraction and
 
 ---
 
-### Task 3: Update hlbcredit to use cardutil
+### Task 3: Update hlb to use cardutil
 
 **Files:**
-- Modify: `internal/providers/hlbcredit/pdf.go`
-- Modify: `internal/providers/hlbcredit/service.go`
+- Modify: `internal/providers/hlb/pdf.go`
+- Modify: `internal/providers/hlb/service.go`
 
 **Interfaces:**
 - Consumes: `cardutil.ExtractAfterMarker`, `cardutil.ApplyMapping`
@@ -384,14 +384,14 @@ Add import: `"actual_helper/internal/providers/cardutil"`
 
 - [ ] **Step 3: Run tests**
 
-Run: `ginkgo run ./internal/providers/hlbcredit/...`
+Run: `ginkgo run ./internal/providers/hlb/...`
 Expected: PASS
 
 - [ ] **Step 4: Commit**
 
 ```bash
-git add internal/providers/hlbcredit/
-git commit -m "refactor(hlbcredit): use cardutil for card number extraction and mapping"
+git add internal/providers/hlb/
+git commit -m "refactor(hlb): use cardutil for card number extraction and mapping"
 ```
 
 ---
@@ -468,7 +468,7 @@ Expected: PASS
 
 - [ ] **Step 2: Verify no regressions**
 
-Check that all provider tests still pass. Confirm no local `cardNumberRe` remains in hsbccredit, hlbcredit, or uobcredit `pdf.go`.
+Check that all provider tests still pass. Confirm no local `cardNumberRe` remains in hsbccredit, hlb, or uobcredit `pdf.go`.
 
 - [ ] **Step 3: Final commit if needed**
 

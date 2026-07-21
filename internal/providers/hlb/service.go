@@ -56,13 +56,42 @@ func (p *HLBProvider) ParseCSV(ctx context.Context, r io.Reader) ([]models.Actua
 func (p *HLBProvider) ParsePDFText(ctx context.Context, text string) ([]models.ActualBudgetReport, error) {
 	logger := slog.With("provider", "hlb", "format", "pdf")
 
-	accountName := extractAccountName(text)
-	reports, err := parseTransactions(text)
+	format := DetectFormat(text)
+	switch format {
+	case "credit":
+		return p.parseCreditPDF(ctx, logger, text)
+	case "debit":
+		return p.parseDebitPDF(ctx, logger, text)
+	default:
+		return nil, errors.New("unable to detect HLB statement format")
+	}
+}
+
+func (p *HLBProvider) parseCreditPDF(ctx context.Context, logger *slog.Logger, text string) ([]models.ActualBudgetReport, error) {
+	accountName := extractCreditAccountName(text)
+	reports, err := parseCreditTransactions(text)
 	if err != nil {
 		return nil, err
 	}
 
-	logger.InfoContext(ctx, "pdf parsing started", "transactions", len(reports), "account", accountName)
+	logger.InfoContext(ctx, "pdf parsing started", "transactions", len(reports), "account", accountName, "type", "credit")
+
+	result := p.toActualReports(ctx, logger, reports, accountName)
+	logger.InfoContext(ctx, "pdf parsing complete", "parsed_count", len(result))
+	if len(result) == 0 {
+		return nil, errors.New("no transactions found after filtering")
+	}
+	return result, nil
+}
+
+func (p *HLBProvider) parseDebitPDF(ctx context.Context, logger *slog.Logger, text string) ([]models.ActualBudgetReport, error) {
+	accountName := extractDebitAccountName(text)
+	reports, err := parseDebitTransactions(text)
+	if err != nil {
+		return nil, err
+	}
+
+	logger.InfoContext(ctx, "pdf parsing started", "transactions", len(reports), "account", accountName, "type", "debit")
 
 	result := p.toActualReports(ctx, logger, reports, accountName)
 	logger.InfoContext(ctx, "pdf parsing complete", "parsed_count", len(result))
