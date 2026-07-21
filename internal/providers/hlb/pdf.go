@@ -1,4 +1,4 @@
-package hlbcredit
+package hlb
 
 import (
 	"errors"
@@ -12,7 +12,7 @@ import (
 )
 
 var (
-	statementDateRe   = regexp.MustCompile(`(?:Tarikh Penyata|Statement Date)\s+(\d{2} \w{3} \d{4})`)
+	statementDateRe = regexp.MustCompile(`(?:Tarikh Penyata|Statement Date)\s+(\d{2} \w{3} \d{4})`)
 
 	transactionLineRe = regexp.MustCompile(`^\s*(\d{2} \w{3})\s+(\d{2} \w{3})\s+(.+?)\s{2,}([\d,.]+)\s*(CR)?$`)
 	skipPatterns      = []string{
