@@ -70,7 +70,7 @@ func RegisterConvertRoutes(server *fuego.Server, convertHandler *ConvertHandler)
 		option.Description("Upload a CSV or encrypted PDF transaction file from a supported provider and get back an Actual Budget compatible CSV."),
 		option.Tags("convert"),
 		option.RequestContentType("multipart/form-data"),
-		option.Path("provider", "any supported providers", param.Example("Touch n Go", "tng"), param.Example("RYT Bank", "ryt"), param.Example("HSBC Credit", "hsbccredit"), param.Example("HLB Credit", "hlbcredit"), param.Example("UOB Credit", "uobcredit"), param.Example("GX Bank", "gxbank")),
+		option.Path("provider", "any supported providers", param.Example("Touch n Go", "tng"), param.Example("RYT Bank", "ryt"), param.Example("HSBC Credit", "hsbccredit"), param.Example("HLB", "hlb"), param.Example("UOB Credit", "uobcredit"), param.Example("GX Bank", "gxbank")),
 		option.AddResponse(200, "Successful conversion — returns a CSV file ready for Actual Budget import", fuego.Response{
 			ContentTypes: []string{"text/csv"},
 			Type:         ConvertResponseBody{},

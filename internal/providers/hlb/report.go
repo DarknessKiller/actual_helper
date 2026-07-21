@@ -1,4 +1,4 @@
-package hlbcredit
+package hlb
 
 type HLBReport struct {
 	TransDate   string

@@ -1,4 +1,4 @@
-package hlbcredit
+package hlb
 
 import (
 	"context"
@@ -46,15 +46,15 @@ func (p *HLBProvider) matchCategory(description string) (string, string) {
 }
 
 func (p *HLBProvider) Name() string {
-	return "hlbcredit"
+	return "hlb"
 }
 
 func (p *HLBProvider) ParseCSV(ctx context.Context, r io.Reader) ([]models.ActualBudgetReport, error) {
-	return nil, errors.New("not supported for hlbcredit provider")
+	return nil, errors.New("not supported for hlb provider")
 }
 
 func (p *HLBProvider) ParsePDFText(ctx context.Context, text string) ([]models.ActualBudgetReport, error) {
-	logger := slog.With("provider", "hlbcredit", "format", "pdf")
+	logger := slog.With("provider", "hlb", "format", "pdf")
 
 	accountName := extractAccountName(text)
 	reports, err := parseTransactions(text)
