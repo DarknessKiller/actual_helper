@@ -8,6 +8,9 @@ import (
 	"actual_helper/internal/dateutil"
 )
 
+// WhitespaceRe matches one or more whitespace characters.
+var WhitespaceRe = regexp.MustCompile(`\s+`)
+
 // CardNumberRe matches card numbers: 4 groups of 4 digits separated by spaces or dashes.
 var CardNumberRe = regexp.MustCompile(`(\d{4}[\s-]*\d{4}[\s-]*\d{4}[\s-]*\d{4})`)
 
