@@ -76,7 +76,7 @@ Configuration is checked on every request by comparing the config file's mtime. 
 | **Statement types** | Credit card and debit account — auto-detected from PDF content |
 | **Credit card detection** | Amount suffixed with `CR` (e.g., `45.90 CR`) |
 | **Credit card debit detection** | Plain positive amount (e.g., `19.05`) |
-| **Debit account detection** | Explicit `+`/`-` prefix in amount |
+| **Debit account detection** | Column position (layout format) or description match (`Deposit` = credit) |
 | **Date format** | `DD MMM` (year inferred from statement date; cross-year boundary handled) |
 | **Statement date format** | `DD MMM YYYY` (e.g., `14 JUL 2026`) |
 | **Special handling** | Summary rows (previous balance, charges, subtotal) are automatically skipped; format auto-detected per statement |
