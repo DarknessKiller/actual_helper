@@ -84,78 +84,7 @@ func (p *HLBProvider) parseCreditPDF(ctx context.Context, logger *slog.Logger, t
 }
 
 func (p *HLBProvider) parseDebitPDF(ctx context.Context, logger *slog.Logger, text string) ([]models.ActualBudgetReport, error) {
-	accountName := "HLB Debit Account"
-	if idx := strings.Index(text, "A/C No"); idx != -1 {
-		line := text[idx:]
-		newlineIdx := strings.Index(line, "\n")
-		if newlineIdx == -1 {
-			newlineIdx = len(line)
-		}
-		sameLine := line[:newlineIdx]
-		if colonIdx := strings.Index(sameLine, ":"); colonIdx != -1 {
-			value := strings.TrimSpace(sameLine[colonIdx+1:])
-			if spaceIdx := strings.Index(value, " "); spaceIdx != -1 {
-				value = value[:spaceIdx]
-			}
-			value = strings.ReplaceAll(value, " ", "")
-			value = strings.ReplaceAll(value, "/", "")
-			value = strings.ReplaceAll(value, "-", "")
-			if len(value) > 0 {
-				accountName = value
-			}
-		} else {
-			remaining := text[idx+newlineIdx+1:]
-			lines := strings.SplitN(remaining, "\n", 3)
-			for _, l := range lines {
-				trimmed := strings.TrimSpace(l)
-				if strings.HasPrefix(trimmed, ":") {
-					valueLine := strings.TrimSpace(trimmed[1:])
-					valueLine = strings.ReplaceAll(valueLine, " ", "")
-					valueLine = strings.ReplaceAll(valueLine, "/", "")
-					valueLine = strings.ReplaceAll(valueLine, "-", "")
-					if len(valueLine) > 0 {
-						accountName = valueLine
-					}
-					break
-				}
-			}
-		}
-	} else if idx := strings.Index(text, "No Akaun"); idx != -1 {
-		line := text[idx:]
-		newlineIdx := strings.Index(line, "\n")
-		if newlineIdx == -1 {
-			newlineIdx = len(line)
-		}
-		sameLine := line[:newlineIdx]
-		if colonIdx := strings.Index(sameLine, ":"); colonIdx != -1 {
-			value := strings.TrimSpace(sameLine[colonIdx+1:])
-			if spaceIdx := strings.Index(value, " "); spaceIdx != -1 {
-				value = value[:spaceIdx]
-			}
-			value = strings.ReplaceAll(value, " ", "")
-			value = strings.ReplaceAll(value, "/", "")
-			value = strings.ReplaceAll(value, "-", "")
-			if len(value) > 0 {
-				accountName = value
-			}
-		} else {
-			remaining := text[idx+newlineIdx+1:]
-			lines := strings.SplitN(remaining, "\n", 3)
-			for _, l := range lines {
-				trimmed := strings.TrimSpace(l)
-				if strings.HasPrefix(trimmed, ":") {
-					valueLine := strings.TrimSpace(trimmed[1:])
-					valueLine = strings.ReplaceAll(valueLine, " ", "")
-					valueLine = strings.ReplaceAll(valueLine, "/", "")
-					valueLine = strings.ReplaceAll(valueLine, "-", "")
-					if len(valueLine) > 0 {
-						accountName = valueLine
-					}
-					break
-				}
-			}
-		}
-	}
+	accountName := extractAccountFromMarkers(text, []string{"A/C No", "No Akaun"}, "HLB Debit Account")
 
 	reports, err := parseDebitTransactions(text)
 	if err != nil {
@@ -212,6 +141,53 @@ func (p *HLBProvider) toActualReports(ctx context.Context, logger *slog.Logger, 
 	}
 
 	return result
+}
+
+func extractAccountFromMarkers(text string, markers []string, fallback string) string {
+	for _, marker := range markers {
+		if idx := strings.Index(text, marker); idx != -1 {
+			return extractAccountFromMarker(text, idx, fallback)
+		}
+	}
+	return fallback
+}
+
+func extractAccountFromMarker(text string, idx int, fallback string) string {
+	line := text[idx:]
+	newlineIdx := strings.Index(line, "\n")
+	if newlineIdx == -1 {
+		newlineIdx = len(line)
+	}
+	sameLine := line[:newlineIdx]
+	if colonIdx := strings.Index(sameLine, ":"); colonIdx != -1 {
+		value := strings.TrimSpace(sameLine[colonIdx+1:])
+		if spaceIdx := strings.Index(value, " "); spaceIdx != -1 {
+			value = value[:spaceIdx]
+		}
+		value = strings.ReplaceAll(value, " ", "")
+		value = strings.ReplaceAll(value, "/", "")
+		value = strings.ReplaceAll(value, "-", "")
+		if len(value) > 0 {
+			return value
+		}
+	} else {
+		remaining := text[idx+newlineIdx+1:]
+		lines := strings.SplitN(remaining, "\n", 3)
+		for _, l := range lines {
+			trimmed := strings.TrimSpace(l)
+			if strings.HasPrefix(trimmed, ":") {
+				valueLine := strings.TrimSpace(trimmed[1:])
+				valueLine = strings.ReplaceAll(valueLine, " ", "")
+				valueLine = strings.ReplaceAll(valueLine, "/", "")
+				valueLine = strings.ReplaceAll(valueLine, "-", "")
+				if len(valueLine) > 0 {
+					return valueLine
+				}
+				break
+			}
+		}
+	}
+	return fallback
 }
 
 func (p *HLBProvider) ExtractionMethod() pdfutil.ExtractionMethod {
