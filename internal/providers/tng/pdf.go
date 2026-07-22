@@ -10,8 +10,8 @@ import (
 )
 
 var (
-	dateRe       = regexp.MustCompile(`(?m)^(\d{1,2}/\d{1,2}/\d{4})\s+(Success|Failed)\s+`)
-	amountRe     = regexp.MustCompile(`RM(\d+[.,]?\d*\.\d{2})`)
+	dateRe   = regexp.MustCompile(`(?m)^(\d{1,2}/\d{1,2}/\d{4})\s+(Success|Failed)\s+`)
+	amountRe = regexp.MustCompile(`RM(\d+[.,]?\d*\.\d{2})`)
 )
 
 func parsePDFBlocks(text string) ([]TNGReport, error) {
@@ -175,4 +175,3 @@ func isReferenceToken(tok string) bool {
 
 	return false
 }
-

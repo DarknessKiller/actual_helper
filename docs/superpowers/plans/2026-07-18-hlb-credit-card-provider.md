@@ -25,10 +25,14 @@
 | File | Responsibility |
 |------|----------------|
 | `internal/providers/hlb/report.go` | `HLBReport` struct definition |
-| `internal/providers/hlb/pdf.go` | Pure parsing functions (regex, transaction parsing) |
+| `internal/providers/hlb/credit.go` | Credit card PDF parsing (statement date, transaction lines, skip patterns) |
+| `internal/providers/hlb/debit.go` | Debit account PDF parsing (column-based and layout-based formats) |
+| `internal/providers/hlb/detect.go` | Format auto-detection (`DetectFormat`: credit/debit/unknown) |
 | `internal/providers/hlb/service.go` | Provider struct, implements `Provider` + `ConfigurableProvider` |
-| `internal/providers/hlb/hlb_suite_test.go` | Ginkgo test suite bootstrap |
-| `internal/providers/hlb/pdf_test.go` | PDF parsing unit tests |
+| `internal/providers/hlb/hlbcredit_suite_test.go` | Ginkgo test suite bootstrap |
+| `internal/providers/hlb/pdf_test.go` | Credit card PDF parsing tests |
+| `internal/providers/hlb/debit_test.go` | Debit account PDF parsing tests |
+| `internal/providers/hlb/detect_test.go` | Format detection tests |
 | `internal/providers/hlb/service_test.go` | Provider behavior tests |
 | `cmd/app/main.go` | Register provider in bootstrap |
 
