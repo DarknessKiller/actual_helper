@@ -163,7 +163,7 @@ func extractLayoutAmounts(line string, start int, withdrawalCol, balanceCol int)
 
 	prevMatches := debitAmountRe.FindAllStringIndex(rest, -1)
 	if prevMatches == nil {
-		if lastNumEnd >= balanceCol {
+		if balanceCol >= 0 && lastNumEnd >= balanceCol {
 			return strings.TrimSpace(rest), "", ""
 		} else if lastNumEnd >= withdrawalCol {
 			return strings.TrimSpace(rest), "", lastNum
