@@ -5,24 +5,25 @@ import (
 	"log/slog"
 	"regexp"
 	"strings"
+
+	"actual_helper/internal/dateutil"
 )
 
 var (
 	dateRe       = regexp.MustCompile(`(?m)^(\d{1,2}/\d{1,2}/\d{4})\s+(Success|Failed)\s+`)
 	amountRe     = regexp.MustCompile(`RM(\d+[.,]?\d*\.\d{2})`)
-	whitespaceRe = regexp.MustCompile(`\s+`)
 )
 
 func parsePDFBlocks(text string) ([]TNGReport, error) {
 	const marker = "TNG WALLET TRANSACTION"
 	idx := strings.LastIndex(text, marker)
 	if idx == -1 {
-		slog.Debug("marker not found in text", "text_preview", truncate(text, 200))
+		slog.Debug("marker not found in text", "text_preview", dateutil.Truncate(text, 200))
 		return nil, errors.New("no transactions section found")
 	}
 
 	body := text[idx+len(marker):]
-	slog.Debug("pdf body preview", "body", truncate(body, 500))
+	slog.Debug("pdf body preview", "body", dateutil.Truncate(body, 500))
 
 	splits := dateRe.FindAllStringSubmatchIndex(body, -1)
 	if len(splits) == 0 {
@@ -175,9 +176,3 @@ func isReferenceToken(tok string) bool {
 	return false
 }
 
-func truncate(s string, n int) string {
-	if len(s) <= n {
-		return s
-	}
-	return s[:n] + "..."
-}

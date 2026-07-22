@@ -10,68 +10,6 @@ import (
 var debitDateRe = regexp.MustCompile(`^\s*(\d{2}-\d{2}-\d{4})\s`)
 var debitAmountRe = regexp.MustCompile(`([\d,]+\.\d{2})`)
 
-func extractDebitAccountName(text string) string {
-	idx := strings.Index(text, "A/C No")
-	if idx == -1 {
-		idx = strings.Index(text, "No Akaun")
-	}
-	if idx == -1 {
-		return "HLB Debit Account"
-	}
-
-	// Check if account number is on the same line (format: "A/C No / No Akaun      : 31200037164")
-	line := text[idx:]
-	newlineIdx := strings.Index(line, "\n")
-	if newlineIdx == -1 {
-		newlineIdx = len(line)
-	}
-	sameLine := line[:newlineIdx]
-	if colonIdx := strings.Index(sameLine, ":"); colonIdx != -1 {
-		value := strings.TrimSpace(sameLine[colonIdx+1:])
-		// Remove trailing "MYR" or similar
-		if spaceIdx := strings.Index(value, " "); spaceIdx != -1 {
-			value = value[:spaceIdx]
-		}
-		value = strings.ReplaceAll(value, " ", "")
-		value = strings.ReplaceAll(value, "/", "")
-		value = strings.ReplaceAll(value, "-", "")
-		if len(value) > 0 {
-			return value
-		}
-	}
-
-	// Fallback: account number on next line
-	remaining := text[idx+newlineIdx+1:]
-	lines := strings.SplitN(remaining, "\n", 3)
-	if len(lines) == 0 {
-		return "HLB Debit Account"
-	}
-
-	valueLine := ""
-	for _, l := range lines {
-		trimmed := strings.TrimSpace(l)
-		if strings.HasPrefix(trimmed, ":") {
-			valueLine = trimmed[1:]
-			break
-		}
-	}
-
-	if valueLine == "" {
-		return "HLB Debit Account"
-	}
-
-	valueLine = strings.TrimSpace(valueLine)
-	valueLine = strings.ReplaceAll(valueLine, " ", "")
-	valueLine = strings.ReplaceAll(valueLine, "/", "")
-	valueLine = strings.ReplaceAll(valueLine, "-", "")
-
-	if len(valueLine) > 0 {
-		return valueLine
-	}
-
-	return "HLB Debit Account"
-}
-
 func parseDebitTransactions(text string) ([]HLBReport, error) {
 	lines := strings.Split(text, "\n")
 
