@@ -170,7 +170,7 @@ func extractAccountFromMarker(text string, idx int, fallback string) string {
 		if len(value) > 0 {
 			return value
 		}
-	} else {
+	} else if newlineIdx < len(line) {
 		remaining := text[idx+newlineIdx+1:]
 		lines := strings.SplitN(remaining, "\n", 3)
 		for _, l := range lines {
