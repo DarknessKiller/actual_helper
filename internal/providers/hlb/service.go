@@ -5,7 +5,6 @@ import (
 	"errors"
 	"io"
 	"log/slog"
-	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -68,7 +67,7 @@ func (p *HLBProvider) ParsePDFText(ctx context.Context, text string) ([]models.A
 }
 
 func (p *HLBProvider) parseCreditPDF(ctx context.Context, logger *slog.Logger, text string) ([]models.ActualBudgetReport, error) {
-	accountName := extractCreditAccountName(text)
+	accountName := cardutil.ExtractAfterMarker(text, "Credit Card Number", "HLB Credit Card")
 	reports, err := parseCreditTransactions(text)
 	if err != nil {
 		return nil, err
@@ -85,7 +84,79 @@ func (p *HLBProvider) parseCreditPDF(ctx context.Context, logger *slog.Logger, t
 }
 
 func (p *HLBProvider) parseDebitPDF(ctx context.Context, logger *slog.Logger, text string) ([]models.ActualBudgetReport, error) {
-	accountName := extractDebitAccountName(text)
+	accountName := "HLB Debit Account"
+	if idx := strings.Index(text, "A/C No"); idx != -1 {
+		line := text[idx:]
+		newlineIdx := strings.Index(line, "\n")
+		if newlineIdx == -1 {
+			newlineIdx = len(line)
+		}
+		sameLine := line[:newlineIdx]
+		if colonIdx := strings.Index(sameLine, ":"); colonIdx != -1 {
+			value := strings.TrimSpace(sameLine[colonIdx+1:])
+			if spaceIdx := strings.Index(value, " "); spaceIdx != -1 {
+				value = value[:spaceIdx]
+			}
+			value = strings.ReplaceAll(value, " ", "")
+			value = strings.ReplaceAll(value, "/", "")
+			value = strings.ReplaceAll(value, "-", "")
+			if len(value) > 0 {
+				accountName = value
+			}
+		} else {
+			remaining := text[idx+newlineIdx+1:]
+			lines := strings.SplitN(remaining, "\n", 3)
+			for _, l := range lines {
+				trimmed := strings.TrimSpace(l)
+				if strings.HasPrefix(trimmed, ":") {
+					valueLine := strings.TrimSpace(trimmed[1:])
+					valueLine = strings.ReplaceAll(valueLine, " ", "")
+					valueLine = strings.ReplaceAll(valueLine, "/", "")
+					valueLine = strings.ReplaceAll(valueLine, "-", "")
+					if len(valueLine) > 0 {
+						accountName = valueLine
+					}
+					break
+				}
+			}
+		}
+	} else if idx := strings.Index(text, "No Akaun"); idx != -1 {
+		line := text[idx:]
+		newlineIdx := strings.Index(line, "\n")
+		if newlineIdx == -1 {
+			newlineIdx = len(line)
+		}
+		sameLine := line[:newlineIdx]
+		if colonIdx := strings.Index(sameLine, ":"); colonIdx != -1 {
+			value := strings.TrimSpace(sameLine[colonIdx+1:])
+			if spaceIdx := strings.Index(value, " "); spaceIdx != -1 {
+				value = value[:spaceIdx]
+			}
+			value = strings.ReplaceAll(value, " ", "")
+			value = strings.ReplaceAll(value, "/", "")
+			value = strings.ReplaceAll(value, "-", "")
+			if len(value) > 0 {
+				accountName = value
+			}
+		} else {
+			remaining := text[idx+newlineIdx+1:]
+			lines := strings.SplitN(remaining, "\n", 3)
+			for _, l := range lines {
+				trimmed := strings.TrimSpace(l)
+				if strings.HasPrefix(trimmed, ":") {
+					valueLine := strings.TrimSpace(trimmed[1:])
+					valueLine = strings.ReplaceAll(valueLine, " ", "")
+					valueLine = strings.ReplaceAll(valueLine, "/", "")
+					valueLine = strings.ReplaceAll(valueLine, "-", "")
+					if len(valueLine) > 0 {
+						accountName = valueLine
+					}
+					break
+				}
+			}
+		}
+	}
+
 	reports, err := parseDebitTransactions(text)
 	if err != nil {
 		return nil, err
@@ -101,8 +172,6 @@ func (p *HLBProvider) parseDebitPDF(ctx context.Context, logger *slog.Logger, te
 	return result, nil
 }
 
-var whitespacePattern = regexp.MustCompile(`\s+`)
-
 func (p *HLBProvider) toActualReports(ctx context.Context, logger *slog.Logger, reports []HLBReport, accountName string) []models.ActualBudgetReport {
 	var result []models.ActualBudgetReport
 
@@ -116,7 +185,7 @@ func (p *HLBProvider) toActualReports(ctx context.Context, logger *slog.Logger, 
 			continue
 		}
 
-		description := strings.TrimSpace(whitespacePattern.ReplaceAllString(report.Description, " "))
+		description := strings.TrimSpace(cardutil.WhitespaceRe.ReplaceAllString(report.Description, " "))
 
 		amountStr := strings.ReplaceAll(report.Amount, ",", "")
 		amount, err := strconv.ParseFloat(amountStr, 64)

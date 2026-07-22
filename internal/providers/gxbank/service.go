@@ -5,7 +5,6 @@ import (
 	"errors"
 	"io"
 	"log/slog"
-	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -14,6 +13,7 @@ import (
 	"actual_helper/internal/models"
 	"actual_helper/internal/pdfutil"
 	"actual_helper/internal/providers"
+	"actual_helper/internal/providers/cardutil"
 	"actual_helper/internal/rule"
 )
 
@@ -64,8 +64,6 @@ func (p *GXBankProvider) ParsePDFText(ctx context.Context, text string) ([]model
 	return result, nil
 }
 
-var whitespacePattern = regexp.MustCompile(`\s+`)
-
 func (p *GXBankProvider) toActualReports(ctx context.Context, logger *slog.Logger, reports []GXReport, accountName string) []models.ActualBudgetReport {
 	var result []models.ActualBudgetReport
 
@@ -89,7 +87,7 @@ func (p *GXBankProvider) toActualReports(ctx context.Context, logger *slog.Logge
 			continue
 		}
 
-		description := strings.TrimSpace(whitespacePattern.ReplaceAllString(report.Description, " "))
+		description := strings.TrimSpace(cardutil.WhitespaceRe.ReplaceAllString(report.Description, " "))
 
 		amountStr := strings.TrimPrefix(strings.TrimPrefix(report.Amount, "+"), "-")
 		amountStr = strings.ReplaceAll(amountStr, ",", "")
