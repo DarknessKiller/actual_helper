@@ -26,8 +26,8 @@
 | `internal/providers/cardutil/cardutil_test.go` | Create | Tests for shared helpers |
 | `internal/providers/hsbccredit/pdf.go` | Modify | Remove local `cardNumberRe`, simplify `extractAccountName` |
 | `internal/providers/hsbccredit/service.go` | Modify | Replace mapping lookup with `cardutil.ApplyMapping` |
-| `internal/providers/hlb/pdf.go` | Modify | Remove local `cardNumberRe`, simplify `extractAccountName` |
-| `internal/providers/hlb/service.go` | Modify | Replace mapping lookup with `cardutil.ApplyMapping` |
+| `internal/providers/hlb/service.go` | Modify | Replace mapping lookup with `cardutil.ApplyMapping`; use `cardutil.WhitespaceRe` |
+| `internal/providers/uobcredit/pdf.go` | Modify | Remove local `cardNumberRe`, simplify `extractAccountName` |
 | `internal/providers/uobcredit/pdf.go` | Modify | Remove local `cardNumberRe`, simplify `extractAccountName` |
 | `internal/providers/uobcredit/service.go` | Modify | Replace mapping lookup with `cardutil.ApplyMapping` |
 
@@ -338,41 +338,14 @@ git commit -m "refactor(hsbccredit): use cardutil for card number extraction and
 ### Task 3: Update hlb to use cardutil
 
 **Files:**
-- Modify: `internal/providers/hlb/pdf.go`
 - Modify: `internal/providers/hlb/service.go`
 
 **Interfaces:**
 - Consumes: `cardutil.ExtractAfterMarker`, `cardutil.ApplyMapping`
 
-- [ ] **Step 1: Simplify extractAccountName in pdf.go**
+- [ ] **Step 1: Replace mapping lookup in service.go**
 
-Remove the local `cardNumberRe` regex (line 15) and replace `extractAccountName` with:
-
-```go
-func extractAccountName(text string) string {
-	return cardutil.ExtractAfterMarker(text, "Credit Card Number", "HLB Credit Card")
-}
-```
-
-Add import: `"actual_helper/internal/providers/cardutil"`
-
-Remove import: `"actual_helper/internal/dateutil"` (no longer used directly).
-
-- [ ] **Step 2: Replace mapping lookup in service.go**
-
-In `toActualReports`, replace lines 79-85:
-
-```go
-p.mu.RLock()
-if p.accountMapping != nil {
-    if mapped, ok := p.accountMapping[accountName]; ok {
-        accountName = mapped
-    }
-}
-p.mu.RUnlock()
-```
-
-With:
+In `toActualReports`, replace the inline accountMapping lookup with:
 
 ```go
 p.mu.RLock()
@@ -381,6 +354,16 @@ p.mu.RUnlock()
 ```
 
 Add import: `"actual_helper/internal/providers/cardutil"`
+
+In `parseCreditPDF`, replace inline card number extraction with:
+
+```go
+accountName := cardutil.ExtractAfterMarker(text, "Credit Card Number", "HLB Credit Card")
+```
+
+- [ ] **Step 2: Replace whitespace normalization**
+
+In `toActualReports`, replace `whitespacePattern.ReplaceAllString` with `cardutil.WhitespaceRe.ReplaceAllString`.
 
 - [ ] **Step 3: Run tests**
 
@@ -391,7 +374,7 @@ Expected: PASS
 
 ```bash
 git add internal/providers/hlb/
-git commit -m "refactor(hlb): use cardutil for card number extraction and mapping"
+git commit -m "refactor(hlb): use cardutil for card number extraction, mapping, and whitespace"
 ```
 
 ---
@@ -468,7 +451,7 @@ Expected: PASS
 
 - [ ] **Step 2: Verify no regressions**
 
-Check that all provider tests still pass. Confirm no local `cardNumberRe` remains in hsbccredit, hlb, or uobcredit `pdf.go`.
+Check that all provider tests still pass. Confirm no local `cardNumberRe` remains in hsbccredit, hlb (uses `cardutil.ExtractAfterMarker`), or uobcredit `pdf.go`.
 
 - [ ] **Step 3: Final commit if needed**
 

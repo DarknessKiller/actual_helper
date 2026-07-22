@@ -1,8 +1,8 @@
-# HLB Credit Card Provider Design
+# HLB Provider Design
 
 ## Overview
 
-Add a new provider for Hong Leong Bank (HLB) Credit Card statements. Parses PDF statements using `pdftotext` extraction and outputs Actual Budget-compatible CSV.
+Add a unified provider for Hong Leong Bank (HLB) that parses both credit card and debit account PDF statements using `pdftotext` extraction. Format is auto-detected from PDF content.
 
 ## Provider Name
 
@@ -12,9 +12,9 @@ Add a new provider for Hong Leong Bank (HLB) Credit Card statements. Parses PDF 
 
 `pdftotext` (digital extraction, not OCR)
 
-## Statement Format
+## Statement Formats
 
-HLB credit card statements have:
+### Credit Card Statements
 
 - **Statement date** in `DD MMM YYYY` format (e.g., `14 JUL 2026`)
 - **Card number** in `XXXX XXXX XXXX XXXX` format
@@ -22,8 +22,7 @@ HLB credit card statements have:
 - **Section markers**: `NEW TRANSACTION / CHARGES`, `PAYMENT RECEIVED - THANK YOU`
 - **Summary lines**: `PREVIOUS BALANCE FROM LAST STATEMENT`, `SUB TOTAL`, `TOTAL BALANCE`
 
-### Transaction Line Format
-
+Credit card transaction line format:
 ```
   15 JUN          16 JUN      GRAB-EC            PETALING JAYAMYS                                                                     19.05
   02 JUL          03 JUL      Shopee MY Marketplace KualaLumpur MYS                                                                   45.90    CR
@@ -31,76 +30,54 @@ HLB credit card statements have:
 
 Pattern: `^\s*(\d{2} \w{3})\s+(\d{2} \w{3})\s+(.+?)\s{2,}([\d,.]+)\s*(CR)?$`
 
-- Group 1: Transaction date (`DD MMM`)
-- Group 2: Posting date (`DD MMM`)
-- Group 3: Description
-- Group 4: Amount
-- Group 5: `CR` if credit, empty if debit
-
-### Credit/Debit Detection
-
 - `CR` suffix → positive amount (credit)
 - No suffix → negative amount (debit)
 
+### Debit Account Statements
+
+- **Account number** in `A/C No / No Akaun` or `No Akaun` header
+- **Transactions** with date (`DD-MM-YYYY`), description, and amount
+- Supports two PDF layouts: column-based and layout-based (with deposit/withdrawal/balance columns)
+- **Summary lines**: `Total Withdrawals`, `Total Deposits`, `Closing Balance`, `Baki Akhir`
+- **Opening balance**: `Balance from previous statement` is skipped
+
+Debit account detection: explicit `Deposit`/`Withdrawal` column headers in the PDF.
+
+## Format Auto-Detection
+
+`DetectFormat(text)` examines PDF text content to route to the correct parser:
+- `"credit"`: text contains `Credit Card Number`, `HLB Credit Card`, or `Tarikh Penyata`
+- `"debit"`: text contains `A/C No`, `No Akaun`, or both `Deposit` and `Withdrawal`
+- `"unknown"`: no recognized markers
+
 ## Parsing Logic
 
-### Statement Date
+### Credit Card Parser
 
-Regex: `Tarikh Penyata\s+(\d{2} \w{3} \d{4})`
+- Statement date regex: `Tarikh Penyata\s+(\d{2} \w{3} \d{4})`
+- Card number via `cardutil.ExtractAfterMarker(text, "Credit Card Number", "HLB Credit Card")`
+- Date formatting: `DD MMM` → `YYYY-MM-DD` (year inferred from statement date)
 
-Falls back to `Statement Date\s+(\d{2} \w{3} \d{4})` for English headers.
+### Debit Account Parser
 
-### Card Number (Account Name)
+- Account number extracted inline from `A/C No` or `No Akaun` headers
+- Two parsing strategies: column-based and layout-based (deposit/withdrawal/balance columns)
+- Date format: `DD-MM-YYYY`
 
-Regex: `(\d{4}\s\d{4}\s\d{4}\s\d{4})`
+## Files
 
-Falls back to `HLB Credit Card` if not found.
-
-### Skip Rules
-
-Lines are skipped if they match:
-- `PREVIOUS BALANCE FROM LAST STATEMENT`
-- `NEW TRANSACTION / CHARGES`
-- `SUB TOTAL`
-- `TOTAL BALANCE`
-- `PAYMENT RECEIVED - THANK YOU`
-- Empty lines
-
-### Date Formatting
-
-Transaction dates use `DD MMM` format. Year is inferred from statement date:
-- If transaction month > statement month → previous year
-- Otherwise → statement year
-
-Result: `YYYY-MM-DD`
-
-## Files to Create
-
-### `internal/providers/hlb/service.go`
-
-Provider struct implementing `providers.Provider` and `providers.ConfigurableProvider`:
-
-```go
-type HLBProvider struct {
-    engine         *rule.Engine
-    accountMapping map[string]string
-}
-```
-
-Methods:
-- `Name() string` → `"hlb"`
-- `ParseCSV(ctx, reader)` → returns error (PDF only)
-- `ParsePDFText(ctx, text)` → parses transactions, returns `[]ActualBudgetReport`
-- `ExtractionMethod()` → `pdfutil.ExtractionMethodPdftotext`
-- `Reload(...)` → updates engine and account mapping
-
-### `internal/providers/hlb/pdf.go`
-
-Pure parsing functions:
-- `parseTransactions(text string) ([]HLBReport, error)`
-- `extractStatementDate(lines []string) string`
-- `extractAccountName(text string) string`
-- `parseTransactionLine(line string, stmtDate time.Time) (HLBReport, error)`
+| File | Responsibility |
+|------|----------------|
+| `internal/providers/hlb/report.go` | `HLBReport` struct definition |
+| `internal/providers/hlb/credit.go` | Credit card PDF parsing |
+| `internal/providers/hlb/debit.go` | Debit account PDF parsing |
+| `internal/providers/hlb/detect.go` | Format auto-detection (`DetectFormat`) |
+| `internal/providers/hlb/service.go` | Provider struct, implements `Provider` + `ConfigurableProvider` |
+| `internal/providers/hlb/hlbcredit_suite_test.go` | Ginkgo test suite bootstrap |
+| `internal/providers/hlb/pdf_test.go` | Credit card PDF parsing tests |
+| `internal/providers/hlb/debit_test.go` | Debit account PDF parsing tests |
+| `internal/providers/hlb/detect_test.go` | Format detection tests |
+| `internal/providers/hlb/service_test.go` | Provider behavior tests |
 
 ### `internal/providers/hlb/report.go`
 
@@ -114,32 +91,13 @@ type HLBReport struct {
 }
 ```
 
-### Test Files
-
-- `hlb_suite_test.go` — Ginkgo bootstrap
-- `pdf_test.go` — parsing tests (statement date, card number, transactions, credits, debits, year boundary, filtering, categorization)
-- `service_test.go` — provider tests (name, CSV error, account mapping, filtering)
-
-## Files to Modify
-
-### `cmd/app/main.go`
-
-Add import and registration:
-
-```go
-import hlbprov "actual_helper/internal/providers/hlb"
-
-// In bootstrap.Init:
-"hlb": hlbprov.New,
-```
-
 ## Config
 
 Provider config supports:
 - `exclude_keywords` — skip rows matching these descriptions
 - `include_keywords` — whitelist mode
 - `categories` — auto-categorization rules
-- `account_mappings` — map card numbers to account names
+- `account_mappings` — map card/account numbers to account names
 
 Example `provider_config.json`:
 
@@ -154,7 +112,8 @@ Example `provider_config.json`:
         {"keyword": "shopee", "group": "Shopping", "category": "Online"}
       ],
       "account_mappings": {
-        "1234 5678 9012 3456": "HLB Credit Card"
+        "1234 5678 9012 3456": "HLB Credit Card",
+        "12345678901": "HLB Savings"
       }
     }
   }
@@ -166,16 +125,7 @@ Example `provider_config.json`:
 All tests use fake data — no real names, card numbers, or amounts.
 
 Test cases:
-- Parse debit transaction (no CR suffix)
-- Parse credit transaction (CR suffix)
-- Parse multiple transactions
-- Skip summary lines
-- Error on missing statement date
-- Empty transactions with header present
-- Year boundary (December on January statement)
-- Filter by exclude keywords
-- Match category from description
-- Extract card number for account name
-- Fallback to default account name
-- Account mapping from config
-- CSV returns error (PDF only)
+- Credit: parse debit/credit transactions, multiple transactions, skip summary lines, year boundary, filtering, categorization, card number extraction, account mapping
+- Debit: parse transactions, layout format, amounts with commas, opening balance skip, multiple transactions, account extraction
+- Detection: credit/debit/unknown format detection
+- Provider: name, CSV error, account mapping for credit and debit, auto-detect routing, filtering

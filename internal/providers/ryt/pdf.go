@@ -10,10 +10,10 @@ import (
 )
 
 var (
-	dateRe       = regexp.MustCompile(`(?m)^\s*(\d{1,2} [A-Za-z]+ \d{4})\b`)
-	blockDateRe  = regexp.MustCompile(`^(\d{1,2} [A-Za-z]+ \d{4})\s*(.*)`)
-	signedRe     = regexp.MustCompile(`^[+-]\d+[.,]?\d*\.?\d*$`)
-	amountRe     = regexp.MustCompile(`^(-?\d+[.,]?\d*\.?\d*)$`)
+	dateRe      = regexp.MustCompile(`(?m)^\s*(\d{1,2} [A-Za-z]+ \d{4})\b`)
+	blockDateRe = regexp.MustCompile(`^(\d{1,2} [A-Za-z]+ \d{4})\s*(.*)`)
+	signedRe    = regexp.MustCompile(`^[+-]\d+[.,]?\d*\.?\d*$`)
+	amountRe    = regexp.MustCompile(`^(-?\d+[.,]?\d*\.?\d*)$`)
 )
 
 func extractAccountName(text string) string {
