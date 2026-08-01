@@ -8,24 +8,34 @@ import (
 )
 
 var (
-	dateRe       = regexp.MustCompile(`(?m)^\s*(\d{1,2} [A-Za-z]+ \d{4})\b`)
-	blockDateRe  = regexp.MustCompile(`^(\d{1,2} [A-Za-z]+ \d{4})\s*(.*)`)
-	signedRe     = regexp.MustCompile(`^[+-]\d+[.,]?\d*\.?\d*$`)
-	amountRe     = regexp.MustCompile(`^(-?\d+[.,]?\d*\.?\d*)$`)
+	dateRe       = regexp.MustCompile(`(?m)^\s*(\d{1,2} [A-Za-z]{3,12} \d{4})\b`)
+	blockDateRe  = regexp.MustCompile(`^(\d{1,2} [A-Za-z]{3,12} \d{4})\b\s*(.*)`)
+	signedRe     = regexp.MustCompile(`^[+-]\d+(?:,\d{3})*(?:\.\d+)?$`)
+	amountRe     = regexp.MustCompile(`^-?\d+(?:,\d{3})*(?:\.\d+)?$`)
 	whitespaceRe = regexp.MustCompile(`\s+`)
 )
 
 func extractAccountName(text string) string {
-	if strings.Contains(text, "Statement") {
-		lines := strings.Split(text, "\n")
-		for _, line := range lines {
-			line = strings.TrimSpace(line)
+	idx := strings.Index(text, "Account Transactions")
+	if idx == -1 {
+		return ""
+	}
 
-			if strings.HasSuffix(line, "Statement") {
-				return strings.TrimSpace(
-					strings.TrimSuffix(line, "Statement"),
-				)
-			}
+	body := text[idx:]
+	lines := strings.Split(body, "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.Contains(line, "Account Transactions") {
+			continue
+		}
+
+		if strings.Contains(line, " / ") && !strings.Contains(line, "Transaksi Akaun") {
+			parts := strings.SplitN(line, " / ", 2)
+			return strings.TrimSpace(parts[0])
+		}
+
+		if !strings.Contains(line, "/") {
+			return line
 		}
 	}
 
@@ -33,28 +43,53 @@ func extractAccountName(text string) string {
 }
 
 func parseBlocks(text string) ([]RytReport, error) {
-	const marker = "Account Transactions"
-	idx := strings.Index(text, marker)
+	idx := strings.Index(text, "Account Transactions")
 	if idx == -1 {
 		slog.Warn("marker not found in text", "text_preview", truncate(text, 400))
 		return nil, errors.New("no account transactions section found")
 	}
 
-	body := text[idx+len(marker):]
+	body := text[idx:]
 
-	// Find last column header (Baki = balance) to know where data starts
-	balanceHeaderIdx := findBalanceHeader(body)
-	if balanceHeaderIdx == -1 {
+	// Remove page headers (everything between "Savings Account Statement" and next "Baki")
+	for {
+		stmtIdx := strings.Index(body, "Savings Account Statement")
+		if stmtIdx == -1 {
+			break
+		}
+
+		bakiIdx := strings.Index(body[stmtIdx:], "Baki")
+		if bakiIdx == -1 {
+			break
+		}
+
+		endIdx := stmtIdx + bakiIdx + len("Baki")
+		for endIdx < len(body) && (body[endIdx] == '\n' || body[endIdx] == '\r') {
+			endIdx++
+		}
+		body = body[:stmtIdx] + body[endIdx:]
+	}
+
+	bakiIdx := strings.Index(body, "Baki")
+	if bakiIdx == -1 {
 		return nil, errors.New("no column headers found in pdf body")
 	}
 
-	dataStart := balanceHeaderIdx + len("Baki")
+	dataStart := bakiIdx + len("Baki")
 	for dataStart < len(body) && (body[dataStart] == '\n' || body[dataStart] == '\r') {
 		dataStart++
 	}
 	data := strings.TrimSpace(body[dataStart:])
 	if data == "" {
 		return nil, errors.New("empty data section after balance header")
+	}
+
+	endMarkers := []string{"END OF STATEMENT", "PENYATA TAMAT"}
+	for _, marker := range endMarkers {
+		if endIdx := strings.Index(data, marker); endIdx != -1 {
+			data = strings.TrimSpace(data[:endIdx])
+			break
+		}
 	}
 
 	splits := dateRe.FindAllStringSubmatchIndex(data, -1)

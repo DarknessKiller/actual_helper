@@ -97,8 +97,12 @@ func (p *RytProvider) toActualReports(ctx context.Context, logger *slog.Logger, 
 
 		parsedDate, err := time.Parse("2 January 2006", report.Date)
 		if err != nil {
-			logger.DebugContext(ctx, "row skipped: invalid date", "raw", report.Date)
-			continue
+			// Try abbreviated month format
+			parsedDate, err = time.Parse("2 Jan 2006", report.Date)
+			if err != nil {
+				logger.DebugContext(ctx, "row skipped: invalid date", "raw", report.Date)
+				continue
+			}
 		}
 
 		description := strings.TrimSpace(whitespaceRe.ReplaceAllString(report.Description, " "))
