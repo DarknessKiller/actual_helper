@@ -25,7 +25,7 @@ func main() {
 		"tng":        tngprov.New,
 		"ryt":        rytprov.New,
 		"hsbccredit": hsbccreditprov.New,
-		"hlb":  hlbprov.New,
+		"hlb":        hlbprov.New,
 		"gxbank":     gxbankprov.New,
 		"uobcredit":  uobcreditprov.New,
 	})
