@@ -5,7 +5,6 @@ import (
 	"errors"
 	"io"
 	"log/slog"
-	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -72,8 +71,6 @@ func (p *UOBProvider) ParsePDFText(ctx context.Context, text string) ([]models.A
 	return result, nil
 }
 
-var whitespacePattern = regexp.MustCompile(`\s+`)
-
 func (p *UOBProvider) toActualReports(ctx context.Context, logger *slog.Logger, reports []UOBReport, accountName string) []models.ActualBudgetReport {
 	var result []models.ActualBudgetReport
 
@@ -87,7 +84,7 @@ func (p *UOBProvider) toActualReports(ctx context.Context, logger *slog.Logger, 
 			continue
 		}
 
-		description := strings.TrimSpace(whitespacePattern.ReplaceAllString(report.Description, " "))
+		description := strings.TrimSpace(cardutil.WhitespaceRe.ReplaceAllString(report.Description, " "))
 
 		amountStr := strings.ReplaceAll(report.Amount, ",", "")
 		amount, err := strconv.ParseFloat(amountStr, 64)

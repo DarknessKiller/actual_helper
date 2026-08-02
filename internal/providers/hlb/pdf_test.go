@@ -1,10 +1,10 @@
-package hlbcredit_test
+package hlb_test
 
 import (
 	"context"
 
 	"actual_helper/internal/models"
-	hlbcreditprov "actual_helper/internal/providers/hlbcredit"
+	hlbprov "actual_helper/internal/providers/hlb"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -12,11 +12,11 @@ import (
 
 var _ = Describe("ParsePDFText", func() {
 	var (
-		provider = hlbcreditprov.New(nil, nil, nil, nil)
+		provider = hlbprov.New(nil, nil, nil, nil)
 		ctx      = context.Background()
 	)
 
-	It("parses a debit transaction", func() {
+	It("parses a credit transaction with negative amount", func() {
 		text := `Tarikh Penyata                    14 JUL 2026
   15 JUN          16 JUN      STORE-ABC          KOTA LAMA                                                                     25.00`
 
@@ -115,7 +115,7 @@ Tarikh Penyata                    14 JUL 2026
 	})
 
 	It("filters description using exclude keywords", func() {
-		provider := hlbcreditprov.New([]string{"STORE"}, nil, nil, nil)
+		provider := hlbprov.New([]string{"STORE"}, nil, nil, nil)
 		text := `Tarikh Penyata                    14 JUL 2026
   15 JUN          16 JUN      STORE-ABC          KOTA LAMA                                                                     25.00
   20 JUN          22 JUN      FUEL STATION       SEGAMBUT                                                                       75.00`
@@ -130,7 +130,7 @@ Tarikh Penyata                    14 JUL 2026
 		categories := []models.CategoryRule{
 			{Keyword: "STORE", Group: "Shopping", Category: "Retail"},
 		}
-		provider := hlbcreditprov.New(nil, nil, categories, nil)
+		provider := hlbprov.New(nil, nil, categories, nil)
 		text := `Tarikh Penyata                    14 JUL 2026
   15 JUN          16 JUN      STORE-ABC          KOTA LAMA                                                                     25.00`
 

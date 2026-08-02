@@ -2,7 +2,7 @@
 
 ## Problem
 
-Three credit card providers (`hsbccredit`, `hlbcredit`, `uobcredit`) duplicate:
+Three credit card providers (`hsbccredit`, `hlb`, `uobcredit`) duplicate:
 - `cardNumberRe` — identical regex in each `pdf.go`
 - `extractAccountName` — similar logic with different markers
 - `accountMapping` field + `Reload()` + lookup in `toActualReports` — identical pattern in each `service.go`
@@ -90,13 +90,13 @@ func ApplyMapping(mapping map[string]string, name string) string {
 
 ### Provider changes
 
-Each provider's `pdf.go` replaces its local `cardNumberRe` and `extractAccountName` with a call to `cardutil`:
+Each provider's PDF parsing file replaces its local `cardNumberRe` and `extractAccountName` with a call to `cardutil`:
 
-| Provider | Before | After |
-|---|---|---|
-| `hsbccredit` | local `cardNumberRe`, `extractAccountName` finds "Card Number" marker | `cardutil.ExtractAfterMarker(text, "Card Number", "HSBC Credit Card")` |
-| `hlbcredit` | local `cardNumberRe`, `extractAccountName` finds "Credit Card Number" marker | `cardutil.ExtractAfterMarker(text, "Credit Card Number", "HLB Credit Card")` |
-| `uobcredit` | local `cardNumberRe`, `extractAccountName` finds card type indicators | `cardutil.ExtractNearCardType(text, []string{"WORLD MASTERCARD", "MASTERCARD", "VISA"}, "UOB Credit Card")` |
+| Provider | File | Before | After |
+|---|---|---|---|
+| `hsbccredit` | `pdf.go` | local `cardNumberRe`, `extractAccountName` finds "Card Number" marker | `cardutil.ExtractAfterMarker(text, "Card Number", "HSBC Credit Card")` |
+| `hlb` | `service.go` | inline card number extraction in `parseCreditPDF` | `cardutil.ExtractAfterMarker(text, "Credit Card Number", "HLB Credit Card")` |
+| `uobcredit` | `pdf.go` | local `cardNumberRe`, `extractAccountName` finds card type indicators | `cardutil.ExtractNearCardType(text, []string{"WORLD MASTERCARD", "MASTERCARD", "VISA"}, "UOB Credit Card")` |
 
 Each provider's `service.go` replaces the `accountMapping` lookup block with `cardutil.ApplyMapping(p.accountMapping, accountName)`.
 
@@ -110,14 +110,17 @@ Each provider's `service.go` replaces the `accountMapping` lookup block with `ca
 
 | File | Change |
 |---|---|
-| `internal/providers/cardutil/cardutil.go` | **New** — shared helpers |
+| `internal/providers/cardutil/cardutil.go` | **New** — shared helpers (`WhitespaceRe`, `CardNumberRe`, `ExtractAfterMarker`, `ExtractNearCardType`, `ApplyMapping`) |
 | `internal/providers/cardutil/cardutil_test.go` | **New** — tests for shared helpers |
 | `internal/providers/hsbccredit/pdf.go` | Remove local `cardNumberRe`, simplify `extractAccountName` |
-| `internal/providers/hsbccredit/service.go` | Replace accountMapping lookup with `cardutil.ApplyMapping` |
-| `internal/providers/hlbcredit/pdf.go` | Remove local `cardNumberRe`, simplify `extractAccountName` |
-| `internal/providers/hlbcredit/service.go` | Replace accountMapping lookup with `cardutil.ApplyMapping` |
-| `internal/providers/uobcredit/pdf.go` | Remove local `cardNumberRe`, simplify `extractAccountName` |
-| `internal/providers/uobcredit/service.go` | Replace accountMapping lookup with `cardutil.ApplyMapping` |
+| `internal/providers/hsbccredit/service.go` | Replace accountMapping lookup with `cardutil.ApplyMapping`; use `cardutil.WhitespaceRe` |
+| `internal/providers/hlb/service.go` | Use `cardutil.ExtractAfterMarker` and `cardutil.ApplyMapping`; use `cardutil.WhitespaceRe` |
+| `internal/providers/ryt/pdf.go` | Remove local `whitespaceRe`; use `dateutil.Truncate` |
+| `internal/providers/ryt/service.go` | Use `cardutil.WhitespaceRe` |
+| `internal/providers/tng/pdf.go` | Remove local `whitespaceRe` and `truncate`; use `dateutil.Truncate` |
+| `internal/providers/tng/service.go` | Use `cardutil.WhitespaceRe` |
+| `internal/providers/uobcredit/service.go` | Replace accountMapping lookup with `cardutil.ApplyMapping`; use `cardutil.WhitespaceRe` |
+| `internal/providers/gxbank/service.go` | Use `cardutil.WhitespaceRe` |
 
 ### Testing
 

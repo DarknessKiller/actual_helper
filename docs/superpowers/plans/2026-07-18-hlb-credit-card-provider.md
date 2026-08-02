@@ -10,7 +10,7 @@
 
 ## Global Constraints
 
-- Provider name: `hlbcredit`
+- Provider name: `hlb`
 - Extraction method: `pdftotext` (not OCR)
 - Statement date format: `DD MMM YYYY` (e.g., `14 JUL 2026`)
 - Transaction date format: `DD MMM` (year inferred from statement date)
@@ -24,12 +24,16 @@
 
 | File | Responsibility |
 |------|----------------|
-| `internal/providers/hlbcredit/report.go` | `HLBReport` struct definition |
-| `internal/providers/hlbcredit/pdf.go` | Pure parsing functions (regex, transaction parsing) |
-| `internal/providers/hlbcredit/service.go` | Provider struct, implements `Provider` + `ConfigurableProvider` |
-| `internal/providers/hlbcredit/hlbcredit_suite_test.go` | Ginkgo test suite bootstrap |
-| `internal/providers/hlbcredit/pdf_test.go` | PDF parsing unit tests |
-| `internal/providers/hlbcredit/service_test.go` | Provider behavior tests |
+| `internal/providers/hlb/report.go` | `HLBReport` struct definition |
+| `internal/providers/hlb/credit.go` | Credit card PDF parsing (statement date, transaction lines, skip patterns) |
+| `internal/providers/hlb/debit.go` | Debit account PDF parsing (column-based and layout-based formats) |
+| `internal/providers/hlb/detect.go` | Format auto-detection (`DetectFormat`: credit/debit/unknown) |
+| `internal/providers/hlb/service.go` | Provider struct, implements `Provider` + `ConfigurableProvider` |
+| `internal/providers/hlb/hlbcredit_suite_test.go` | Ginkgo test suite bootstrap |
+| `internal/providers/hlb/pdf_test.go` | Credit card PDF parsing tests |
+| `internal/providers/hlb/debit_test.go` | Debit account PDF parsing tests |
+| `internal/providers/hlb/detect_test.go` | Format detection tests |
+| `internal/providers/hlb/service_test.go` | Provider behavior tests |
 | `cmd/app/main.go` | Register provider in bootstrap |
 
 ---
@@ -37,7 +41,7 @@
 ### Task 1: Create report.go with HLBReport struct
 
 **Files:**
-- Create: `internal/providers/hlbcredit/report.go`
+- Create: `internal/providers/hlb/report.go`
 
 **Interfaces:**
 - Produces: `HLBReport` struct used by `pdf.go` and `service.go`
@@ -45,7 +49,7 @@
 - [ ] **Step 1: Create report.go**
 
 ```go
-package hlbcredit
+package hlb
 
 type HLBReport struct {
 	TransDate   string
@@ -58,14 +62,14 @@ type HLBReport struct {
 
 - [ ] **Step 2: Verify it compiles**
 
-Run: `go build ./internal/providers/hlbcredit/`
+Run: `go build ./internal/providers/hlb/`
 Expected: No output (success)
 
 - [ ] **Step 3: Commit**
 
 ```bash
-git add internal/providers/hlbcredit/report.go
-git commit -m "feat(hlbcredit): add HLBReport struct"
+git add internal/providers/hlb/report.go
+git commit -m "feat(hlb): add HLBReport struct"
 ```
 
 ---
@@ -73,7 +77,7 @@ git commit -m "feat(hlbcredit): add HLBReport struct"
 ### Task 2: Create pdf.go with parsing functions
 
 **Files:**
-- Create: `internal/providers/hlbcredit/pdf.go`
+- Create: `internal/providers/hlb/pdf.go`
 
 **Interfaces:**
 - Consumes: `HLBReport` from Task 1
@@ -82,7 +86,7 @@ git commit -m "feat(hlbcredit): add HLBReport struct"
 - [ ] **Step 1: Create pdf.go with all parsing functions**
 
 ```go
-package hlbcredit
+package hlb
 
 import (
 	"errors"
@@ -239,14 +243,14 @@ func truncate(s string, n int) string {
 
 - [ ] **Step 2: Verify it compiles**
 
-Run: `go build ./internal/providers/hlbcredit/`
+Run: `go build ./internal/providers/hlb/`
 Expected: No output (success)
 
 - [ ] **Step 3: Commit**
 
 ```bash
-git add internal/providers/hlbcredit/pdf.go
-git commit -m "feat(hlbcredit): add PDF parsing functions"
+git add internal/providers/hlb/pdf.go
+git commit -m "feat(hlb): add PDF parsing functions"
 ```
 
 ---
@@ -254,8 +258,8 @@ git commit -m "feat(hlbcredit): add PDF parsing functions"
 ### Task 3: Create pdf_test.go with parsing tests
 
 **Files:**
-- Create: `internal/providers/hlbcredit/hlbcredit_suite_test.go`
-- Create: `internal/providers/hlbcredit/pdf_test.go`
+- Create: `internal/providers/hlb/hlb_suite_test.go`
+- Create: `internal/providers/hlb/pdf_test.go`
 
 **Interfaces:**
 - Consumes: `parseTransactions()`, `extractStatementDate()`, `extractAccountName()` from Task 2
@@ -263,7 +267,7 @@ git commit -m "feat(hlbcredit): add PDF parsing functions"
 - [ ] **Step 1: Create Ginkgo suite bootstrap**
 
 ```go
-package hlbcredit_test
+package hlb_test
 
 import (
 	"testing"
@@ -281,12 +285,12 @@ func TestHLBCredit(t *testing.T) {
 - [ ] **Step 2: Create pdf_test.go with all parsing tests**
 
 ```go
-package hlbcredit_test
+package hlb_test
 
 import (
 	"context"
 
-	hlbcreditprov "actual_helper/internal/providers/hlbcredit"
+	hlbprov "actual_helper/internal/providers/hlb"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -294,7 +298,7 @@ import (
 
 var _ = Describe("ParsePDFText", func() {
 	var (
-		provider = hlbcreditprov.New(nil, nil, nil, nil)
+		provider = hlbprov.New(nil, nil, nil, nil)
 		ctx      = context.Background()
 	)
 
@@ -398,7 +402,7 @@ Tarikh Penyata                    14 JUL 2026
 	})
 
 	It("filters description using exclude keywords", func() {
-		provider := hlbcreditprov.New([]string{"GRAB"}, nil, nil, nil)
+		provider := hlbprov.New([]string{"GRAB"}, nil, nil, nil)
 		text := `Tarikh Penyata                    14 JUL 2026
   15 JUN          16 JUN      GRAB-EC            PETALING JAYA                                                                     19.05
   20 JUN          22 JUN      BHPETROL           CHERAS                                                                             57.24`
@@ -413,7 +417,7 @@ Tarikh Penyata                    14 JUL 2026
 		categories := []models.CategoryRule{
 			{Keyword: "GRAB", Group: "Food & Dining", Category: "Delivery"},
 		}
-		provider := hlbcreditprov.New(nil, nil, categories, nil)
+		provider := hlbprov.New(nil, nil, categories, nil)
 		text := `Tarikh Penyata                    14 JUL 2026
   15 JUN          16 JUN      GRAB-EC            PETALING JAYA                                                                     19.05`
 
@@ -441,14 +445,14 @@ PAYMENT RECEIVED - THANK YOU
 
 - [ ] **Step 3: Run tests to verify they compile and run**
 
-Run: `go test ./internal/providers/hlbcredit/ -v`
+Run: `go test ./internal/providers/hlb/ -v`
 Expected: All tests PASS
 
 - [ ] **Step 4: Commit**
 
 ```bash
-git add internal/providers/hlbcredit/hlbcredit_suite_test.go internal/providers/hlbcredit/pdf_test.go
-git commit -m "test(hlbcredit): add PDF parsing unit tests"
+git add internal/providers/hlb/hlb_suite_test.go internal/providers/hlb/pdf_test.go
+git commit -m "test(hlb): add PDF parsing unit tests"
 ```
 
 ---
@@ -456,7 +460,7 @@ git commit -m "test(hlbcredit): add PDF parsing unit tests"
 ### Task 4: Create service.go with provider implementation
 
 **Files:**
-- Create: `internal/providers/hlbcredit/service.go`
+- Create: `internal/providers/hlb/service.go`
 
 **Interfaces:**
 - Consumes: `parseTransactions()`, `extractAccountName()` from Task 2, `HLBReport` from Task 1
@@ -465,7 +469,7 @@ git commit -m "test(hlbcredit): add PDF parsing unit tests"
 - [ ] **Step 1: Create service.go**
 
 ```go
-package hlbcredit
+package hlb
 
 import (
 	"context"
@@ -507,15 +511,15 @@ func (p *HLBProvider) matchCategory(description string) (string, string) {
 }
 
 func (p *HLBProvider) Name() string {
-	return "hlbcredit"
+	return "hlb"
 }
 
 func (p *HLBProvider) ParseCSV(ctx context.Context, r io.Reader) ([]models.ActualBudgetReport, error) {
-	return nil, errors.New("not supported for hlbcredit provider")
+	return nil, errors.New("not supported for hlb provider")
 }
 
 func (p *HLBProvider) ParsePDFText(ctx context.Context, text string) ([]models.ActualBudgetReport, error) {
-	logger := slog.With("provider", "hlbcredit", "format", "pdf")
+	logger := slog.With("provider", "hlb", "format", "pdf")
 
 	accountName := extractAccountName(text)
 	reports, err := parseTransactions(text)
@@ -583,14 +587,14 @@ func (p *HLBProvider) ExtractionMethod() pdfutil.ExtractionMethod {
 
 - [ ] **Step 2: Verify it compiles**
 
-Run: `go build ./internal/providers/hlbcredit/`
+Run: `go build ./internal/providers/hlb/`
 Expected: No output (success)
 
 - [ ] **Step 3: Commit**
 
 ```bash
-git add internal/providers/hlbcredit/service.go
-git commit -m "feat(hlbcredit): add provider implementation"
+git add internal/providers/hlb/service.go
+git commit -m "feat(hlb): add provider implementation"
 ```
 
 ---
@@ -598,7 +602,7 @@ git commit -m "feat(hlbcredit): add provider implementation"
 ### Task 5: Create service_test.go with provider tests
 
 **Files:**
-- Create: `internal/providers/hlbcredit/service_test.go`
+- Create: `internal/providers/hlb/service_test.go`
 
 **Interfaces:**
 - Consumes: `New()` from Task 4
@@ -606,13 +610,13 @@ git commit -m "feat(hlbcredit): add provider implementation"
 - [ ] **Step 1: Create service_test.go**
 
 ```go
-package hlbcredit_test
+package hlb_test
 
 import (
 	"context"
 	"strings"
 
-	hlbcreditprov "actual_helper/internal/providers/hlbcredit"
+	hlbprov "actual_helper/internal/providers/hlb"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -620,15 +624,15 @@ import (
 
 var _ = Describe("HLBProvider", func() {
 	Describe("Name", func() {
-		It("returns hlbcredit", func() {
-			provider := hlbcreditprov.New(nil, nil, nil, nil)
-			Expect(provider.Name()).To(Equal("hlbcredit"))
+		It("returns hlb", func() {
+			provider := hlbprov.New(nil, nil, nil, nil)
+			Expect(provider.Name()).To(Equal("hlb"))
 		})
 	})
 
 	Describe("ParseCSV", func() {
-		It("returns error because hlbcredit only supports PDF", func() {
-			provider := hlbcreditprov.New(nil, nil, nil, nil)
+		It("returns error because hlb only supports PDF", func() {
+			provider := hlbprov.New(nil, nil, nil, nil)
 			_, err := provider.ParseCSV(context.Background(), strings.NewReader("a,b,c\n1,2,3"))
 			Expect(err).To(HaveOccurred())
 		})
@@ -639,7 +643,7 @@ var _ = Describe("HLBProvider", func() {
 			accountMappings := map[string]string{
 				"1234 5678 9012 3456": "HLB Credit",
 			}
-			provider := hlbcreditprov.New(nil, nil, nil, accountMappings)
+			provider := hlbprov.New(nil, nil, nil, accountMappings)
 			text := `Credit Card Number    1234 5678 9012 3456
 Tarikh Penyata                    14 JUL 2026
   15 JUN          16 JUN      GRAB-EC            PETALING JAYA                                                                     19.05`
@@ -651,7 +655,7 @@ Tarikh Penyata                    14 JUL 2026
 		})
 
 		It("falls back to HLB Credit Card when no card number in PDF", func() {
-			provider := hlbcreditprov.New(nil, nil, nil, nil)
+			provider := hlbprov.New(nil, nil, nil, nil)
 			text := `Tarikh Penyata                    14 JUL 2026
   15 JUN          16 JUN      GRAB-EC            PETALING JAYA                                                                     19.05`
 
@@ -664,7 +668,7 @@ Tarikh Penyata                    14 JUL 2026
 
 	Describe("ParsePDFText with filtering", func() {
 		It("skips rows matching exclude keywords", func() {
-			provider := hlbcreditprov.New([]string{"GRAB"}, nil, nil, nil)
+			provider := hlbprov.New([]string{"GRAB"}, nil, nil, nil)
 			text := `Tarikh Penyata                    14 JUL 2026
   15 JUN          16 JUN      GRAB-EC            PETALING JAYA                                                                     19.05
   20 JUN          22 JUN      BHPETROL           CHERAS                                                                             57.24`
@@ -680,14 +684,14 @@ Tarikh Penyata                    14 JUL 2026
 
 - [ ] **Step 2: Run all tests to verify everything passes**
 
-Run: `go test ./internal/providers/hlbcredit/ -v`
+Run: `go test ./internal/providers/hlb/ -v`
 Expected: All tests PASS
 
 - [ ] **Step 3: Commit**
 
 ```bash
-git add internal/providers/hlbcredit/service_test.go
-git commit -m "test(hlbcredit): add provider unit tests"
+git add internal/providers/hlb/service_test.go
+git commit -m "test(hlb): add provider unit tests"
 ```
 
 ---
@@ -707,7 +711,7 @@ In `cmd/app/main.go`, add the import:
 ```go
 import (
 	// ... existing imports ...
-	hlbcreditprov "actual_helper/internal/providers/hlbcredit"
+	hlbprov "actual_helper/internal/providers/hlb"
 )
 ```
 
@@ -718,7 +722,7 @@ registry, loader, env := bootstrap.Init(map[string]bootstrap.ProviderFactory{
 	"tng":        tngprov.New,
 	"ryt":        rytprov.New,
 	"hsbccredit": hsbccreditprov.New,
-	"hlbcredit":  hlbcreditprov.New,
+	"hlb":  hlbprov.New,
 })
 ```
 
@@ -736,7 +740,7 @@ Expected: All tests PASS
 
 ```bash
 git add cmd/app/main.go
-git commit -m "feat(hlbcredit): register provider in main"
+git commit -m "feat(hlb): register provider in main"
 ```
 
 ---
