@@ -16,7 +16,7 @@
     { id: "tng", label: "TNG E-wallet" },
     { id: "ryt", label: "RYT Bank" },
     { id: "hsbccredit", label: "HSBC Credit Card" },
-    { id: "hlbcredit", label: "HLB Credit Card" },
+    { id: "hlb", label: "HLB Credit Card & HL Bank" },
     { id: "uobcredit", label: "UOB Credit Card" },
     { id: "gxbank", label: "GX Bank" },
   ];

@@ -5,14 +5,15 @@ import (
 	"log/slog"
 	"regexp"
 	"strings"
+
+	"actual_helper/internal/dateutil"
 )
 
 var (
-	dateRe       = regexp.MustCompile(`(?m)^\s*(\d{1,2} [A-Za-z]{3,12} \d{4})\b`)
-	blockDateRe  = regexp.MustCompile(`^(\d{1,2} [A-Za-z]{3,12} \d{4})\b\s*(.*)`)
-	signedRe     = regexp.MustCompile(`^[+-]\d+(?:,\d{3})*(?:\.\d+)?$`)
-	amountRe     = regexp.MustCompile(`^-?\d+(?:,\d{3})*(?:\.\d+)?$`)
-	whitespaceRe = regexp.MustCompile(`\s+`)
+	dateRe      = regexp.MustCompile(`(?m)^\s*(\d{1,2} [A-Za-z]+ \d{4})\b`)
+	blockDateRe = regexp.MustCompile(`^(\d{1,2} [A-Za-z]+ \d{4})\s*(.*)`)
+	signedRe    = regexp.MustCompile(`^[+-]\d+(?:,\d{3})*(?:\.\d+)?$`)
+	amountRe    = regexp.MustCompile(`^-?\d+(?:,\d{3})*(?:\.\d+)?$`)
 )
 
 func extractAccountName(text string) string {
@@ -45,7 +46,7 @@ func extractAccountName(text string) string {
 func parseBlocks(text string) ([]RytReport, error) {
 	idx := strings.Index(text, "Account Transactions")
 	if idx == -1 {
-		slog.Warn("marker not found in text", "text_preview", truncate(text, 400))
+		slog.Warn("marker not found in text", "text_preview", dateutil.Truncate(text, 400))
 		return nil, errors.New("no account transactions section found")
 	}
 
@@ -114,7 +115,7 @@ func parseBlocks(text string) ([]RytReport, error) {
 
 		report, err := parseBlock(block)
 		if err != nil {
-			slog.Info("pdf block skipped", "reason", err.Error(), "block", truncate(block, 200))
+			slog.Info("pdf block skipped", "reason", err.Error(), "block", dateutil.Truncate(block, 200))
 			continue
 		}
 		reports = append(reports, report)
@@ -217,11 +218,4 @@ func findBalanceHeader(body string) int {
 		return idx
 	}
 	return -1
-}
-
-func truncate(s string, n int) string {
-	if len(s) <= n {
-		return s
-	}
-	return s[:n] + "..."
 }

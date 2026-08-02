@@ -13,6 +13,7 @@ import (
 	"actual_helper/internal/models"
 	"actual_helper/internal/pdfutil"
 	"actual_helper/internal/providers"
+	"actual_helper/internal/providers/cardutil"
 	"actual_helper/internal/rule"
 )
 
@@ -101,7 +102,7 @@ func (p *TNGProvider) toActualReports(ctx context.Context, logger *slog.Logger, 
 			continue
 		}
 
-		description := strings.TrimSpace(whitespaceRe.ReplaceAllString(report.Description, " "))
+		description := strings.TrimSpace(cardutil.WhitespaceRe.ReplaceAllString(report.Description, " "))
 
 		amount, err := parseAmount(report.Amount)
 		if err != nil || amount == 0 {

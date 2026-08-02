@@ -1,4 +1,4 @@
-package hlbcredit_test
+package hlb_test
 
 import (
 	"testing"
@@ -7,7 +7,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestHLBCredit(t *testing.T) {
+func TestHLB(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "HLB Credit Suite")
+	RunSpecs(t, "HLB Suite")
 }
