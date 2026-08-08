@@ -42,7 +42,7 @@ func (service *ConvertService) ConvertFile(ctx context.Context, providerName str
 	switch {
 	case strings.Contains(contentType, "pdf"):
 		var text string
-		text, err := pdfutil.ExtractText(file, password, provider.ExtractionMethod())
+		text, err := pdfutil.ExtractText(ctx, file, password, provider.ExtractionMethod())
 		if err != nil {
 			return nil, fmt.Errorf("pdf extraction: %w", err)
 		}

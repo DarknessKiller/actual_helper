@@ -2,6 +2,7 @@ package pdfutil
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"log/slog"
@@ -9,6 +10,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"sort"
+	"time"
 
 	"github.com/ledongthuc/pdf"
 	"github.com/pdfcpu/pdfcpu/pkg/api"
@@ -21,9 +23,13 @@ const (
 	ExtractionMethodDigital   ExtractionMethod = "digital"
 	ExtractionMethodPdftotext ExtractionMethod = "pdftotext"
 	ExtractionMethodOCR       ExtractionMethod = "ocr"
+
+	timeoutDigital   = 30 * time.Second
+	timeoutPdftotext = 60 * time.Second
+	timeoutOCR       = 5 * time.Minute
 )
 
-func ExtractText(r io.Reader, password string, method ExtractionMethod) (string, error) {
+func ExtractText(ctx context.Context, r io.Reader, password string, method ExtractionMethod) (string, error) {
 	data, err := io.ReadAll(r)
 	if err != nil {
 		return "", fmt.Errorf("read input: %w", err)
@@ -41,17 +47,17 @@ func ExtractText(r io.Reader, password string, method ExtractionMethod) (string,
 
 	switch method {
 	case ExtractionMethodDigital:
-		return extractDigital(data)
+		return extractDigital(ctx, data)
 	case ExtractionMethodPdftotext:
-		return extractWithPdftotext(data)
+		return extractWithPdftotext(ctx, data)
 	case ExtractionMethodOCR:
-		return extractWithOCR(data)
+		return extractWithOCR(ctx, data)
 	default:
 		return "", fmt.Errorf("unknown extraction method: %s", method)
 	}
 }
 
-func extractDigital(data []byte) (string, error) {
+func extractDigital(ctx context.Context, data []byte) (string, error) {
 	tmpDir, err := os.MkdirTemp("", "pdfutil")
 	if err != nil {
 		return "", fmt.Errorf("create temp dir: %w", err)
@@ -63,26 +69,46 @@ func extractDigital(data []byte) (string, error) {
 		return "", fmt.Errorf("write temp pdf: %w", err)
 	}
 
-	f, reader, err := pdf.Open(srcPath)
-	if err != nil {
-		return "", fmt.Errorf("open pdf: %w", err)
+	// ponytail: ledongthuc/pdf is pure Go, no subprocess to cancel.
+	// Wrap in timeout via goroutine since CGO-free lib can't use exec.CommandContext.
+	type result struct {
+		text string
+		err  error
 	}
-	defer f.Close()
-
-	var text string
-	for i := 1; i <= reader.NumPage(); i++ {
-		page := reader.Page(i)
-		pageText, err := page.GetPlainText(nil)
+	ch := make(chan result, 1)
+	go func() {
+		f, reader, err := pdf.Open(srcPath)
 		if err != nil {
-			continue
+			ch <- result{err: fmt.Errorf("open pdf: %w", err)}
+			return
 		}
-		text += pageText + "\n"
-	}
+		defer f.Close()
 
-	return text, nil
+		var text string
+		for i := 1; i <= reader.NumPage(); i++ {
+			if ctx.Err() != nil {
+				ch <- result{err: ctx.Err()}
+				return
+			}
+			page := reader.Page(i)
+			pageText, err := page.GetPlainText(nil)
+			if err != nil {
+				continue
+			}
+			text += pageText + "\n"
+		}
+		ch <- result{text: text}
+	}()
+
+	select {
+	case <-ctx.Done():
+		return "", ctx.Err()
+	case r := <-ch:
+		return r.text, r.err
+	}
 }
 
-func extractWithPdftotext(data []byte) (string, error) {
+func extractWithPdftotext(ctx context.Context, data []byte) (string, error) {
 	tmpDir, err := os.MkdirTemp("", "pdftext")
 	if err != nil {
 		return "", fmt.Errorf("create temp dir: %w", err)
@@ -94,10 +120,16 @@ func extractWithPdftotext(data []byte) (string, error) {
 		return "", fmt.Errorf("write temp pdf: %w", err)
 	}
 
-	cmd := exec.Command("pdftotext", "-layout", pdfPath, "-")
+	ctx, cancel := context.WithTimeout(ctx, timeoutPdftotext)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, "pdftotext", "-layout", pdfPath, "-")
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	if err := cmd.Run(); err != nil {
+		if ctx.Err() != nil {
+			return "", fmt.Errorf("pdftotext timeout: %w", ctx.Err())
+		}
 		return "", fmt.Errorf("pdftotext failed: %w", err)
 	}
 
@@ -107,7 +139,7 @@ func extractWithPdftotext(data []byte) (string, error) {
 const maxStripHeight = 4000
 const stripOverlap = 200
 
-func extractWithOCR(data []byte) (string, error) {
+func extractWithOCR(ctx context.Context, data []byte) (string, error) {
 	tmpDir, err := os.MkdirTemp("", "pdfocr")
 	if err != nil {
 		return "", fmt.Errorf("create temp dir: %w", err)
@@ -119,9 +151,16 @@ func extractWithOCR(data []byte) (string, error) {
 		return "", fmt.Errorf("write temp pdf: %w", err)
 	}
 
+	ctx, cancel := context.WithTimeout(ctx, timeoutOCR)
+	defer cancel()
+
+	// PDF → PNG via pdftoppm (subprocess, context-cancellable)
 	outPrefix := filepath.Join(tmpDir, "page")
-	cmd := exec.Command("pdftoppm", "-png", "-r", "200", pdfPath, outPrefix)
+	cmd := exec.CommandContext(ctx, "pdftoppm", "-png", "-r", "200", pdfPath, outPrefix)
 	if out, err := cmd.CombinedOutput(); err != nil {
+		if ctx.Err() != nil {
+			return "", fmt.Errorf("pdftoppm timeout: %w", ctx.Err())
+		}
 		return "", fmt.Errorf("pdftoppm failed: %w\n%s", err, string(out))
 	}
 
@@ -131,16 +170,30 @@ func extractWithOCR(data []byte) (string, error) {
 	}
 	sort.Strings(matches)
 
+	client, err := newOCRClient()
+	if err != nil {
+		return "", err
+	}
+	defer client.Close()
+
 	var text string
 	for _, pagePath := range matches {
-		stripPaths, err := splitIntoStrips(pagePath)
+		if ctx.Err() != nil {
+			return "", ctx.Err()
+		}
+
+		stripPaths, err := splitIntoStrips(ctx, pagePath)
 		if err != nil {
 			slog.Warn("failed to split page into strips, trying full page", "path", pagePath, "error", err)
 			stripPaths = []string{pagePath}
 		}
 
 		for _, stripPath := range stripPaths {
-			pageText, err := ocrImage(stripPath)
+			if ctx.Err() != nil {
+				return "", ctx.Err()
+			}
+
+			pageText, err := ocrImage(ctx, client, stripPath)
 			if stripPath != pagePath {
 				os.Remove(stripPath)
 			}
@@ -156,8 +209,8 @@ func extractWithOCR(data []byte) (string, error) {
 	return text, nil
 }
 
-func splitIntoStrips(path string) ([]string, error) {
-	cmd := exec.Command("identify", "-format", "%h", path)
+func splitIntoStrips(ctx context.Context, path string) ([]string, error) {
+	cmd := exec.CommandContext(ctx, "identify", "-format", "%h", path)
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	if err := cmd.Run(); err != nil {
@@ -175,13 +228,17 @@ func splitIntoStrips(path string) ([]string, error) {
 
 	var strips []string
 	for y := 0; y < height; {
+		if ctx.Err() != nil {
+			return strips, ctx.Err()
+		}
+
 		stripH := maxStripHeight
 		if y+stripH > height {
 			stripH = height - y
 		}
 
 		stripPath := fmt.Sprintf("%s.strip.%d.png", path, len(strips))
-		crop := exec.Command("convert", path, "-crop", fmt.Sprintf("%dx%d+0+%d", 0, stripH, y), "+repage", stripPath)
+		crop := exec.CommandContext(ctx, "convert", path, "-crop", fmt.Sprintf("%dx%d+0+%d", 0, stripH, y), "+repage", stripPath)
 		if out, err := crop.CombinedOutput(); err != nil {
 			return nil, fmt.Errorf("convert crop failed: %w\n%s", err, string(out))
 		}
@@ -196,12 +253,4 @@ func splitIntoStrips(path string) ([]string, error) {
 	return strips, nil
 }
 
-func ocrImage(path string) (string, error) {
-	cmd := exec.Command("tesseract", path, "stdout", "-l", "eng+msa")
-	var out bytes.Buffer
-	cmd.Stdout = &out
-	if err := cmd.Run(); err != nil {
-		return "", fmt.Errorf("tesseract failed: %w", err)
-	}
-	return out.String(), nil
-}
+
