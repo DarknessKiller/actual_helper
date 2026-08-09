@@ -1,5 +1,6 @@
 <script>
-  import { convertFile } from "$lib/api.js";
+  import { convertLocally } from "$lib/api.js";
+  import { mergeConfigs } from "$lib/rules.js";
   import { addConversion } from "$lib/stores/history.js";
   import { fade, fly } from "svelte/transition";
 
@@ -11,6 +12,8 @@
   let status = $state("idle");
   let errorMsg = $state("");
   let dragOver = $state(false);
+  let statusMessage = $state("");
+  const defaultConfig = { exclude_keywords: [], include_keywords: [], categories: [], account_mappings: {} };
 
   const providers = [
     { id: "tng", label: "TNG E-wallet" },
@@ -56,18 +59,14 @@
     errorMsg = "";
 
     try {
-      const response = await convertFile(provider, file, password);
+      const response = await convertLocally(provider, file, password || undefined, defaultConfig, (progress) => {
+        status = `converting-${progress.stage}`;
+        statusMessage = progress.message || '';
+      });
 
-      if (!response.ok) {
-        const errText = await response.text().catch(() => "Conversion failed");
-        throw new Error(errText);
-      }
-
-      const blob = await response.blob();
+      const blob = response;
       const url = URL.createObjectURL(blob);
-      const disposition = response.headers.get("Content-Disposition") || "";
-      const match = disposition.match(/filename="([^"]+)"/);
-      const filename = match?.[1] ?? `${provider}_actual_budget.csv`;
+      const filename = `${provider}_actual_budget.csv`;
       const a = document.createElement("a");
       a.href = url;
       a.download = filename;
@@ -126,7 +125,7 @@
         id="provider-select"
         class="select select-bordered w-full"
         bind:value={provider}
-        disabled={status === "uploading"}
+        disabled={status.startsWith('converting-')}
       >
         <option value="" disabled>Select a provider</option>
         {#each providers as p}
@@ -147,7 +146,7 @@
         bind:this={fileInput}
         accept=".csv,.pdf"
         onchange={handleFileSelect}
-        disabled={status === "uploading"}
+        disabled={status.startsWith('converting-')}
       />
 
       <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -182,7 +181,7 @@
                 file = null;
                 if (fileInput) fileInput.value = "";
               }}
-              disabled={status === "uploading"}>✕</button
+              disabled={status.startsWith('converting-')}>✕</button
             >
           </div>
         {:else}
@@ -218,19 +217,19 @@
           class="input input-bordered w-full"
           placeholder="Enter password if encrypted"
           bind:value={password}
-          disabled={status === "uploading"}
+          disabled={status.startsWith('converting-')}
         />
       </div>
     {/if}
 
     <button
       class="btn btn-primary w-full"
-      class:btn-disabled={!provider || !file || status === "uploading"}
+      class:btn-disabled={!provider || !file || status.startsWith('converting-')}
       onclick={handleSubmit}
     >
-      {#if status === "uploading"}
+      {#if status.startsWith('converting-')}
         <span class="loading loading-spinner loading-sm"></span>
-        Converting...
+        {statusMessage || 'Converting...'}
       {:else}
         Convert to Actual CSV
       {/if}

@@ -14,14 +14,13 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     emptyOutDir: true,
+    target: 'es2022',
+  },
+  optimizeDeps: {
+    include: ['pdfjs-dist', 'tesseract.js'],
   },
   server: {
     port: 5173,
-    proxy: {
-      '/convert': {
-        target: 'http://localhost:8080',
-        changeOrigin: true,
-      },
-    },
+    host: '0.0.0.0',
   },
 });

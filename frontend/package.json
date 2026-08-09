@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "vitest run"
   },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^5.0.0",
@@ -14,6 +15,11 @@
     "daisyui": "^5.0.0",
     "svelte": "^5.0.0",
     "tailwindcss": "^4.0.0",
-    "vite": "^6.0.0"
+    "vite": "^6.0.0",
+    "vitest": "^4.1.10"
+  },
+  "dependencies": {
+    "pdfjs-dist": "^6.2.108",
+    "tesseract.js": "^7.0.0"
   }
 }

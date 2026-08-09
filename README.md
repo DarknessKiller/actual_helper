@@ -1,160 +1,107 @@
 # Actual Helper
 
-A Go web server that converts bank and fintech transaction files into [Actual Budget](https://actualbudget.org)-compatible CSV format. Supports multiple financial providers and file formats (CSV, PDF) through a single REST API.
+A privacy-first, client-side tool that converts bank and fintech transaction files into [Actual Budget](https://actualbudget.org)-compatible CSV format. All processing runs entirely in your browser — no data ever leaves your device.
 
 ---
 
 ## Features
 
-- **Multi-provider architecture** — each financial institution gets its own provider package; easy to extend
-- **CSV & PDF support** — including password-protected PDFs via decryption
-- **Hot-reload configuration** — update filters, categories, and account mappings without restarting the server; takes effect on the next request
-- **Smart filtering** — `exclude_keywords` removes noise; `include_keywords` overrides exclusions to keep important rows
-- **Auto-categorization** — case-insensitive keyword matching with global and per-provider category rules; first match wins
-- **Account name mapping** — maps provider-specific account names to Actual Budget account names
-- **Single output format** — clean CSV with standard Actual Budget columns
+- **100% client-side** — PDF parsing, OCR, and conversion all run in the browser via WebAssembly
+- **Privacy-first** — no server uploads, no network requests during conversion
+- **Offline-capable** — works without internet after first load (PWA-ready)
+- **Multi-provider** — supports 6 Malaysian banks/e-wallets
+- **Smart filtering** — exclude noise, whitelist important transactions
+- **Auto-categorization** — keyword-based category assignment
+- **Password-protected PDFs** — decryption happens client-side
+
+---
+
+## Supported Providers
+
+| Provider | Name | Format | Notes |
+|---|---|---|---|
+| TNG (Touch 'n Go) | `tng` | PDF | Digital extraction |
+| RYT Bank | `ryt` | PDF | Digital extraction |
+| HSBC Credit Card | `hsbccredit` | PDF | OCR (scanned statements) |
+| HLB (Hong Leong Bank) | `hlb` | PDF | Credit + debit auto-detected |
+| UOB Credit Card | `uobcredit` | PDF | Digital extraction |
+| GX Bank | `gxbank` | PDF | Digital extraction |
+
+---
+
+## Quick Start
+
+### Development
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Open `http://localhost:5173` in your browser.
+
+### Production (Docker)
+
+```bash
+docker compose up -d
+```
+
+Open `http://localhost:8080` in your browser.
+
+### Production (Static)
+
+```bash
+cd frontend
+npm run build
+# Serve the dist/ directory with any static file server
+npx serve dist
+```
 
 ---
 
 ## Architecture
 
 ```
-Handler → Service → Provider
+┌─────────────────────────────────────────────┐
+│  Browser (Client-Side)                      │
+│                                             │
+│  PDF.js ──→ Text Extraction                 │
+│  Tesseract.js ──→ OCR (scanned PDFs)        │
+│                                             │
+│  Provider Parsers ──→ ActualBudgetReport[]  │
+│  Rule Engine ──→ Filter + Categorize        │
+│  CSV Serializer ──→ Download                │
+└─────────────────────────────────────────────┘
 ```
 
-The project follows strict three-layer separation:
+All processing happens client-side:
 
-- **Handler** — parses HTTP requests, validates input, calls the service, returns responses. No business logic.
-- **Service** — orchestrates conversion: looks up providers, reloads config, routes to CSV or PDF parsing, serializes output.
-- **Provider** — parses provider-specific file formats and maps fields to the shared output model.
+1. **PDF Extraction** — pdfjs-dist extracts text from digital PDFs
+2. **OCR** — Tesseract.js handles scanned/image-based PDFs (HSBC Credit)
+3. **Provider Parsing** — Each provider has a TypeScript parser that extracts transactions
+4. **Rule Engine** — Filters noise and auto-categorizes transactions
+5. **CSV Output** — Generates Actual Budget-compatible CSV for download
 
-### Hot-Reload Design
-
-Configuration is checked on every request by comparing the config file's mtime. No background goroutines or server restarts needed — changes apply instantly to the next request. Missing or invalid config logs a warning and returns empty rules; the server never crashes due to config issues.
-
----
-
-## Supported Providers
-
-### TNG (Touch 'n Go eWallet)
-
-| | |
-|---|---|
-| **Provider name** | `tng` |
-| **File formats** | PDF only |
-| **Credit detection** | Transaction type-based: Reload, Receive from Wallet, DUITNOW_RECEIVEFROM, Refund, GO+ Daily Earnings, GO+ Cash In |
-| **Debit detection** | All other transaction types |
-| **Filtering** | Reference token detection skips lines with long reference IDs or known prefixes (TNGD, TNGQR, TNGOW) |
-
-### Ryt Bank
-
-| | |
-|---|---|
-| **Provider name** | `ryt` |
-| **File formats** | PDF only |
-| **Amount sign** | Explicit `+`/`-` prefix in the PDF text |
-| **Date format** | `d Month YYYY` (e.g., `1 May 2026`) |
-| **Special handling** | Opening balance rows are automatically skipped |
-
-### HSBC Credit Card (Malaysia)
-
-| | |
-|---|---|
-| **Provider name** | `hsbccredit` |
-| **File formats** | PDF only (image-based, OCR via tesseract + gosseract) |
-| **Credit detection** | Amount suffixed with `CR` (e.g., `259.72CR` = payment received) |
-| **Debit detection** | Plain positive amount (e.g., `8.50` = purchase) |
-| **Date format** | `DD MMM` (year inferred from statement header; cross-year boundary handled) |
-| **Special handling** | Summary rows (previous balance, credit limit, charges) are automatically skipped; OCR fallback for scanned/image-based statements |
-
-### HLB (Hong Leong Bank)
-
-| | |
-|---|---|
-| **Provider name** | `hlb` |
-| **File formats** | PDF only (digital extraction via pdftotext) |
-| **Statement types** | Credit card and debit account — auto-detected from PDF content |
-| **Credit card detection** | Amount suffixed with `CR` (e.g., `45.90 CR`) |
-| **Credit card debit detection** | Plain positive amount (e.g., `19.05`) |
-| **Debit account detection** | Column position (layout format) or description match (`Deposit` = credit) |
-| **Date format** | `DD MMM` (year inferred from statement date; cross-year boundary handled) |
-| **Statement date format** | `DD MMM YYYY` (e.g., `14 JUL 2026`) |
-| **Special handling** | Summary rows (previous balance, charges, subtotal) are automatically skipped; format auto-detected per statement |
-
-### UOB Credit Card
-
-| | |
-|---|---|
-| **Provider name** | `uobcredit` |
-| **File formats** | PDF only (digital extraction via pdftotext) |
-| **Credit detection** | Amount suffixed with `CR` (e.g., `326.76 CR`) |
-| **Debit detection** | Plain positive amount (e.g., `89.00`) |
-| **Date format** | `DD MMM` (year inferred from statement date; cross-year boundary handled) |
-| **Statement date format** | `DD MMM YY` or `DD MMM YYYY` (e.g., `16 JUL 26`) |
-| **Card detection** | Extracts card number from WORLD MASTERCARD / MASTERCARD / VISA areas |
-| **Special handling** | Summary rows (sub-total, minimum payment due, credit limit, previous balance) are automatically skipped |
-
-### GX Bank
-
-| | |
-|---|---|
-| **Provider name** | `gxbank` |
-| **File formats** | PDF only (digital extraction via ledongthuc/pdf) |
-| **Credit detection** | Amount prefixed with `+` (e.g., `+100.00`) |
-| **Debit detection** | Amount prefixed with `-` (e.g., `-50.00`) |
-| **Date format** | `d Month YYYY` (e.g., `1 May 2026`) |
-| **Account types** | GX Savings Account, Pocket |
-| **Account name mapping** | Configurable via `account_mappings` in provider config |
-| **Special handling** | Opening balance rows are automatically skipped; account name extracted from PDF header |
-
-### Adding a New Provider
-
-1. Create a new package under `internal/providers/<name>/`
-2. Implement the `Provider` interface:
-   ```go
-   type Provider interface {
-       Name() string
-       ParseCSV(ctx context.Context, r io.Reader) ([]models.ActualBudgetReport, error)
-       ParsePDFText(ctx context.Context, text string) ([]models.ActualBudgetReport, error)
-       ExtractionMethod() pdfutil.ExtractionMethod
-   }
-   ```
-3. Implement `ConfigurableProvider` if the provider supports config-driven filtering/categorization
-4. For credit card providers, use `internal/providers/cardutil` for card number extraction and account mapping:
-   - `cardutil.ExtractAfterMarker(text, marker, fallback)` — extract card number after a text marker
-   - `cardutil.ExtractNearCardType(text, cardTypes, fallback)` — extract card number near card type indicators
-   - `cardutil.ApplyMapping(mapping, name)` — apply account name mapping from config
-5. Register the provider in `cmd/app/main.go`
+No data leaves your browser. No server-side processing.
 
 ---
 
-## API Reference
+## Tech Stack
 
-### POST /convert/{provider}
-
-Converts a transaction file from the specified provider into Actual Budget CSV format.
-
-**Request:** Multipart form data
-
-| Field | Type | Required | Description |
-|---|---|---|---|
-| `file` | file | yes | The transaction file (CSV or PDF) |
-| `password` | string | no | Password for encrypted PDF files |
-
-**Response:** `200 OK` with `Content-Type: text/csv` and `Content-Disposition: attachment`
-
-**Errors:**
-
-| Status | Body |
+| | |
 |---|---|
-| `400` | Missing file in request |
-| `500` | Unknown provider or processing error |
+| **Frontend** | Svelte 5, Vite 6, Tailwind 4, DaisyUI 5 |
+| **PDF Parsing** | pdfjs-dist (WebAssembly) |
+| **OCR** | Tesseract.js (WebAssembly) |
+| **Testing** | Vitest |
+| **Deployment** | Docker (nginx) or static hosting |
 
 ---
 
 ## Configuration
 
-Set the `PROVIDER_CONFIG_PATH` environment variable to point to a JSON configuration file.
+The app works without configuration. To customize filtering and categorization, create a `provider_config.json` and load it via the UI.
 
 ### Schema
 
@@ -169,53 +116,12 @@ Set the `PROVIDER_CONFIG_PATH` environment variable to point to a JSON configura
   },
   "providers": {
     "tng": {
-      "account_mappings": { "": "TNG" },
-      "exclude_keywords": ["Quick Reload Payment", "Via eWallet to GO+"],
-      "include_keywords": ["Daily Interest"],
-      "categories": [
-        { "keyword": "grab", "group": "Food & Dining", "category": "Delivery" }
-      ]
-    },
-    "ryt": {
-      "account_mappings": { "": "RYT" }
-    },
-    "hsbccredit": {
-      "account_mappings": { "1234 5678 9012 3456": "HSBC Credit Card" },
-      "exclude_keywords": ["Grab"],
-      "include_keywords": [],
-      "categories": [
-        { "keyword": "shopee", "group": "Shopping", "category": "Online" }
-      ]
-    },
-    "hlb": {
-      "account_mappings": {
-        "1234 5678 9012 3456": "HLB Credit Card",
-        "HLB Debit Account": "HLB Savings"
-      },
-      "exclude_keywords": [],
+      "exclude_keywords": ["Quick Reload Payment"],
       "include_keywords": [],
       "categories": [
         { "keyword": "grab", "group": "Food & Dining", "category": "Delivery" }
-      ]
-    },
-    "uobcredit": {
-      "account_mappings": { "1234 5678 9012 3456": "UOB Credit Card" },
-      "exclude_keywords": [],
-      "include_keywords": [],
-      "categories": []
-    },
-    "gxbank": {
-      "account_mappings": {
-        "GX Savings Account": "GX Savings",
-        "Secret stash Bonus Pocket": "GX Pocket"
-      },
-      "exclude_keywords": [],
-      "include_keywords": [],
-      "categories": [
-        { "keyword": "interest earned", "group": "Income", "category": "Interest" },
-        { "keyword": "duitnow", "group": "Transfer", "category": "DuitNow" },
-        { "keyword": "pocket", "group": "Transfer", "category": "Pocket" }
-      ]
+      ],
+      "account_mappings": { "": "TNG" }
     }
   }
 }
@@ -225,34 +131,85 @@ Set the `PROVIDER_CONFIG_PATH` environment variable to point to a JSON configura
 
 | Field | Strategy |
 |---|---|
-| `exclude_keywords` | Union of global + provider-specific keywords |
-| `include_keywords` | Union — if any match, the row is kept even if an exclude keyword also matches |
-| `categories` | Global rules first, then provider-specific rules appended; first match wins |
+| `exclude_keywords` | Union of global + provider-specific |
+| `include_keywords` | Whitelist — if any match, row is kept |
+| `categories` | First match wins |
 | `account_mappings` | Provider-specific only |
-
-Config file is optional. If missing, invalid, or unset, the server logs a warning and runs without filtering or categorization.
 
 ---
 
 ## Testing
 
-All packages use [Ginkgo](https://onsi.github.io/ginkgo/) and [Gomega](https://onsi.github.io/gomega/). Test data uses fake/anonymized data.
-
 ```bash
-ginkgo run ./...
+cd frontend
+npm test
 ```
 
-Each package has its own test suite covering success paths, failure paths, and edge cases (empty inputs, missing fields, boundary conditions).
+Tests use Vitest with inline fixtures matching the Go test data for parity verification.
 
 ---
 
-## Tech Stack
+## Project Structure
 
-| | |
-|---|---|
-| **Language** | Go 1.26 |
-| **Web framework** | [Fuego](https://github.com/go-fuego/fuego) |
-| **Testing** | Ginkgo v2, Gomega, httptest |
-| **PDF extraction** | ledongthuc/pdf (digital), pdftotext (text extraction), tesseract + gosseract (OCR fallback) |
-| **PDF decryption** | pdfcpu |
-| **PDF rendering** | poppler-utils (pdftoppm) |
+```
+frontend/
+├── src/
+│   ├── lib/
+│   │   ├── types.ts              # Shared TypeScript interfaces
+│   │   ├── rules.ts              # Rule engine (filter + categorize)
+│   │   ├── csv.ts                # CSV serializer
+│   │   ├── dateutil.ts           # Date parsing utilities
+│   │   ├── cardutil.ts           # Card number extraction
+│   │   ├── pdf-worker.ts         # PDF.js wrapper
+│   │   ├── ocr-worker.ts         # Tesseract.js wrapper
+│   │   ├── api.ts                # Local conversion pipeline
+│   │   ├── providers/
+│   │   │   ├── tng.ts            # TNG parser
+│   │   │   ├── ryt.ts            # RYT Bank parser
+│   │   │   ├── hlb.ts            # HLB parser (credit + debit)
+│   │   │   ├── hsbccredit.ts     # HSBC Credit parser
+│   │   │   ├── uobcredit.ts      # UOB Credit parser
+│   │   │   └── gxbank.ts         # GX Bank parser
+│   │   ├── components/
+│   │   │   ├── UploadForm.svelte # File upload + conversion
+│   │   │   ├── ResultPanel.svelte
+│   │   │   └── HistoryDashboard.svelte
+│   │   └── stores/
+│   │       └── history.ts        # Conversion history
+│   └── main.ts
+├── package.json
+└── vite.config.js
+```
+
+---
+
+## Adding a New Provider
+
+1. Create `frontend/src/lib/providers/<name>.ts`
+2. Export a parser function: `(text: string, config: ProviderConfig) => ActualBudgetReport[]`
+3. Register in `api.ts`:
+   ```typescript
+   import { parseNewProvider } from './providers/<name>'
+   const parsers = { ..., newprovider: parseNewProvider }
+   ```
+4. Add to `UploadForm.svelte` providers list
+5. Add parity tests in `__tests__/<name>.test.ts`
+
+---
+
+## Legacy (Go Server)
+
+The original Go server implementation is preserved in the `internal/` directory for reference. It is no longer required for the application to function.
+
+To run the legacy server:
+
+```bash
+# Requires Go 1.26+
+go run ./cmd/app
+```
+
+---
+
+## License
+
+MIT

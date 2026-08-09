@@ -1,34 +1,22 @@
-# Frontend build stage
-FROM node:26-alpine AS frontend-builder
+# Build frontend
+FROM node:22-alpine AS frontend
 WORKDIR /app
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci
 COPY frontend/ .
 RUN npm run build
 
-# Backend build stage
-FROM golang:1.26-alpine AS builder
-WORKDIR /app
-RUN apk add --no-cache gcc g++ musl-dev tesseract-ocr-dev
-ARG VERSION
+# Build Go static server
+FROM golang:1.26-alpine AS server
+WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
-COPY . .
-COPY --from=frontend-builder /app/dist frontend/dist
-RUN CGO_ENABLED=1 GOOS=linux go build -tags embed -trimpath \
-    -ldflags="-s -w -X actual_helper/internal/config.Version=${VERSION:-$(git describe --tags --always --dirty)}" \
-    -o actual_helper ./cmd/app
+COPY cmd/staticserver/ cmd/staticserver/
+RUN CGO_ENABLED=0 go build -o /staticserver ./cmd/staticserver
 
-# Runtime stage
-FROM alpine:3.23
-RUN echo "https://dl-cdn.alpinelinux.org/alpine/v3.23/community" >> /etc/apk/repositories \
- && apk add --no-cache tesseract-ocr tesseract-ocr-data-eng tesseract-ocr-data-msa poppler-utils imagemagick \
-    libstdc++ libgcc
-WORKDIR /app
-COPY --from=builder /app/actual_helper actual_helper
-COPY --from=builder /app/provider_config.example.json provider_config.example.json
-ENV APP_ENV=production
-ENV PROVIDER_CONFIG_PATH=/app/provider_config.example.json
-ENV PORT=8080
-EXPOSE $PORT
-CMD ["/app/actual_helper"]
+# Runtime
+FROM alpine:3.21
+COPY --from=frontend /app/dist /app/dist
+COPY --from=server /staticserver /app/staticserver
+EXPOSE 8080
+CMD ["/app/staticserver", "-dir", "/app/dist", "-port", "8080"]
