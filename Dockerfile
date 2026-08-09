@@ -6,10 +6,19 @@ RUN npm ci
 COPY frontend/ .
 RUN npm run build
 
+# Frontend build stage
+FROM node:26-alpine AS frontend-builder
+WORKDIR /app
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm ci
+COPY frontend/ .
+RUN npm run build
+
 # Backend build stage
 FROM golang:1.26-alpine AS builder
 WORKDIR /app
-RUN apk add --no-cache gcc g++ musl-dev tesseract-ocr-dev
+RUN echo "https://dl-cdn.alpinelinux.org/alpine/v3.23/community" >> /etc/apk/repositories \
+ && apk add --no-cache gcc g++ musl-dev leptonica-dev tesseract-ocr-dev
 ARG VERSION
 COPY go.mod go.sum ./
 RUN go mod download

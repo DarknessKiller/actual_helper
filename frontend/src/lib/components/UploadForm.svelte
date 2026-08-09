@@ -65,6 +65,7 @@
         filename: file.name,
         timestamp: new Date().toISOString(),
         success: true,
+        csv,
       });
 
       if (onConversionComplete) onConversionComplete({ history: newHistory, csv });
