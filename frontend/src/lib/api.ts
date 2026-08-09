@@ -1,9 +1,15 @@
 export type ConversionResult = { csv: string }
 
 function wasmResult(result: unknown): string {
-  const parsed = typeof result === 'string' ? JSON.parse(result) : result
-  if ((parsed as any)?.error) throw new Error((parsed as any).error)
-  return (parsed as any)?.csv ?? result as string
+  if (typeof result !== 'string') return (result as any)?.csv ?? ''
+  let parsed: any
+  try {
+    parsed = JSON.parse(result)
+  } catch {
+    return result
+  }
+  if (parsed?.error) throw new Error(parsed.error)
+  return parsed?.csv ?? result
 }
 
 export async function convertFile(provider: string, file: File, password = ''): Promise<ConversionResult> {
