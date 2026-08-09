@@ -13,7 +13,10 @@
   let errorMsg = $state("");
   let dragOver = $state(false);
   let statusMessage = $state("");
-  const defaultConfig = { exclude_keywords: [], include_keywords: [], categories: [], account_mappings: {} };
+  let config = $state(null);
+  let configName = $state("");
+  let configInput = $state(null);
+  const emptyConfig = { exclude_keywords: [], include_keywords: [], categories: [], account_mappings: {} };
 
   const providers = [
     { id: "tng", label: "TNG E-wallet" },
@@ -59,7 +62,8 @@
     errorMsg = "";
 
     try {
-      const response = await convertLocally(provider, file, password || undefined, defaultConfig, (progress) => {
+      const activeConfig = config || emptyConfig;
+      const response = await convertLocally(provider, file, password || undefined, activeConfig, (progress) => {
         status = `converting-${progress.stage}`;
         statusMessage = progress.message || '';
       });
@@ -234,5 +238,44 @@
         Convert to Actual CSV
       {/if}
     </button>
+
+    <div class="divider text-xs">Config (optional)</div>
+
+    <input
+      type="file"
+      class="hidden"
+      bind:this={configInput}
+      accept=".json"
+      onchange={(e) => {
+        const f = e.target?.files?.[0];
+        if (!f) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+          try {
+            config = JSON.parse(reader.result);
+            configName = f.name;
+          } catch {
+            errorMsg = 'Invalid JSON config';
+          }
+        };
+        reader.readAsText(f);
+      }}
+    />
+
+    {#if config}
+      <div class="flex items-center gap-2 text-sm">
+        <span class="text-success">✓</span>
+        <span class="truncate flex-1">{configName}</span>
+        <button
+          class="btn btn-ghost btn-xs"
+          onclick={() => { config = null; configName = ''; if (configInput) configInput.value = ''; }}
+        >Remove</button>
+      </div>
+    {:else}
+      <button
+        class="btn btn-outline btn-sm w-full"
+        onclick={() => configInput?.click()}
+      >Load provider_config.json</button>
+    {/if}
   </div>
 </div>
