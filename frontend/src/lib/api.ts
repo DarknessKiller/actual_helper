@@ -20,16 +20,28 @@ export async function convertFile(provider: string, file: File, password = ''): 
   }
 
   const pdfjs = await import('pdfjs-dist')
+  pdfjs.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).toString()
   const pdfDocument = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()), password }).promise
   let text = ''
   for (let pageNumber = 1; pageNumber <= pdfDocument.numPages; pageNumber++) {
     const page = await pdfDocument.getPage(pageNumber)
     const content = await page.getTextContent()
-    text += content.items.map((item: any) => item.str).join(' ') + '\n'
+    const items = content.items as any[]
+    const lines: any[][] = []
+    for (const item of items) {
+      const y = item.transform?.[5] ?? 0
+      let line = lines.find((candidate) => Math.abs((candidate[0].transform?.[5] ?? 0) - y) < 3)
+      if (!line) lines.push(line = [])
+      line.push(item)
+    }
+    text += lines
+      .sort((a, b) => (b[0].transform?.[5] ?? 0) - (a[0].transform?.[5] ?? 0))
+      .map((line) => line.sort((a, b) => (a.transform?.[4] ?? 0) - (b.transform?.[4] ?? 0)).map((item) => item.str).join(' '))
+      .join('\n') + '\n'
   }
   if (!text.trim()) {
     const { createWorker } = await import('tesseract.js')
-    const worker = await createWorker('eng')
+    const worker = await createWorker('eng+msa')
     try {
       for (let pageNumber = 1; pageNumber <= pdfDocument.numPages; pageNumber++) {
         const page = await pdfDocument.getPage(pageNumber)

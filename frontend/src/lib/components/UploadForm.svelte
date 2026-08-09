@@ -69,6 +69,7 @@
 
       if (onConversionComplete) onConversionComplete({ history: newHistory, csv });
 
+      status = "idle";
       provider = "";
       file = null;
       password = "";

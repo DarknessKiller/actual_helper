@@ -15,6 +15,15 @@
       const wasm = new Go();
       const { instance } = await WebAssembly.instantiateStreaming(fetch("/actual-helper.wasm"), wasm.importObject);
       wasm.run(instance);
+      await new Promise((resolve, reject) => {
+        const started = Date.now();
+        const wait = () => {
+          if (globalThis.actualHelperConvert) return resolve();
+          if (Date.now() - started > 10000) return reject(new Error("Browser converter failed to start"));
+          setTimeout(wait, 25);
+        };
+        wait();
+      });
       const res = await fetch("/version");
       const data = await res.json();
       version = data.version;

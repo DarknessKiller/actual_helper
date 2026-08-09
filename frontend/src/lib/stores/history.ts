@@ -18,7 +18,10 @@ export function loadHistory(): Conversion[] {
 }
 
 export function saveHistory(conversions: Conversion[]): void {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(conversions))
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(conversions))
+  } catch {
+  }
 }
 
 export function addConversion(conversion: Conversion): Conversion[] {
@@ -29,7 +32,10 @@ export function addConversion(conversion: Conversion): Conversion[] {
 }
 
 export function clearHistory(): void {
-  localStorage.removeItem(STORAGE_KEY)
+  try {
+    localStorage.removeItem(STORAGE_KEY)
+  } catch {
+  }
 }
 
 export type { Conversion }

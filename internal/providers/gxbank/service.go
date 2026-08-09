@@ -2,6 +2,7 @@ package gxbank
 
 import (
 	"context"
+	"encoding/csv"
 	"errors"
 	"io"
 	"log/slog"
@@ -41,8 +42,34 @@ func (p *GXBankProvider) Name() string {
 	return "gxbank"
 }
 
-func (p *GXBankProvider) ParseCSV(_ context.Context, _ io.Reader) ([]models.ActualBudgetReport, error) {
-	return nil, errors.New("not supported for gxbank provider")
+func (p *GXBankProvider) ParseCSV(ctx context.Context, r io.Reader) ([]models.ActualBudgetReport, error) {
+	records, err := csv.NewReader(r).ReadAll()
+	if err != nil {
+		return nil, err
+	}
+	if len(records) < 2 {
+		return nil, errors.New("no CSV records found")
+	}
+	header := make(map[string]int)
+	for i, name := range records[0] {
+		header[strings.TrimSpace(name)] = i
+	}
+	var reports []GXReport
+	for _, row := range records[1:] {
+		get := func(name string) string {
+			if i, ok := header[name]; ok && i < len(row) {
+				return row[i]
+			}
+			return ""
+		}
+		amount := get("Amount")
+		reports = append(reports, GXReport{Date: get("Date"), Description: get("Description"), Amount: amount, IsCredit: !strings.HasPrefix(strings.TrimSpace(amount), "-")})
+	}
+	result := p.toActualReports(ctx, slog.With("provider", "gxbank", "format", "csv"), reports, "")
+	if len(result) == 0 {
+		return nil, errors.New("no transactions found after filtering")
+	}
+	return result, nil
 }
 
 func (p *GXBankProvider) ParsePDFText(ctx context.Context, text string) ([]models.ActualBudgetReport, error) {
