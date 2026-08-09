@@ -13,7 +13,8 @@
   onMount(async () => {
     try {
       const wasm = new Go();
-      await WebAssembly.instantiateStreaming(fetch("/actual-helper.wasm"), wasm.importObject).then(({ instance }) => wasm.run(instance));
+      const { instance } = await WebAssembly.instantiateStreaming(fetch("/actual-helper.wasm"), wasm.importObject);
+      wasm.run(instance);
       const res = await fetch("/version");
       const data = await res.json();
       version = data.version;
