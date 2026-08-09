@@ -39,9 +39,14 @@ export async function convertFile(provider: string, file: File, password = ''): 
       .map((line) => line.sort((a, b) => (a.transform?.[4] ?? 0) - (b.transform?.[4] ?? 0)).map((item) => item.str).join(' '))
       .join('\n') + '\n'
   }
-  if (!text.trim()) {
+  const parsePDF = (globalThis as any).actualHelperParsePDFText
+  if (!parsePDF) throw new Error('Browser PDF parser is not loaded')
+  try {
+    return { csv: wasmResult(parsePDF(provider, text)) }
+  } catch (digitalError) {
     const { createWorker } = await import('tesseract.js')
     const worker = await createWorker('eng+msa')
+    let ocrText = ''
     try {
       for (let pageNumber = 1; pageNumber <= pdfDocument.numPages; pageNumber++) {
         const page = await pdfDocument.getPage(pageNumber)
@@ -50,14 +55,12 @@ export async function convertFile(provider: string, file: File, password = ''): 
         canvas.width = viewport.width
         canvas.height = viewport.height
         await page.render({ canvas, canvasContext: canvas.getContext('2d')!, viewport }).promise
-        text += (await worker.recognize(canvas)).data.text + '\n'
+        ocrText += (await worker.recognize(canvas)).data.text + '\n'
       }
     } finally {
       await worker.terminate()
     }
+    if (!ocrText.trim()) throw digitalError
+    return { csv: wasmResult(parsePDF(provider, ocrText)) }
   }
-  if (!text.trim()) throw new Error('No text found in PDF')
-  const parsePDF = (globalThis as any).actualHelperParsePDFText
-  if (!parsePDF) throw new Error('Browser PDF parser is not loaded')
-  return { csv: wasmResult(parsePDF(provider, text)) }
 }

@@ -9,6 +9,8 @@
   let conversions = $state(loadHistory());
   let lastConversion = $state(null);
   let version = $state("");
+  let wasmReady = $state(false);
+  let wasmError = $state("");
 
   onMount(async () => {
     try {
@@ -24,11 +26,12 @@
         };
         wait();
       });
+      wasmReady = true;
       const res = await fetch("/version");
       const data = await res.json();
       version = data.version;
-    } catch {
-      version = "";
+    } catch (error) {
+      wasmError = error.message || "Browser converter failed to load";
     }
   });
 
@@ -50,18 +53,17 @@
     </div>
   </div>
 
-  <main
-    class="max-w-2xl mx-auto px-4 py-6 sm:py-10"
-    in:fade={{ duration: 300 }}
-  >
-    <UploadForm onConversionComplete={handleConversionComplete} />
+  <main class="max-w-2xl mx-auto px-4 py-6 sm:py-10" in:fade={{ duration: 300 }}>
+    {#if wasmError}
+      <div role="alert" class="alert alert-error mb-4">{wasmError}. Refresh to retry.</div>
+    {:else if !wasmReady}
+      <div role="status" class="alert mb-4">Loading browser converter…</div>
+    {/if}
+
+    <UploadForm onConversionComplete={handleConversionComplete} disabled={!wasmReady} />
 
     {#if lastConversion}
-      <ResultPanel
-        filename={lastConversion.filename}
-        provider={lastConversion.provider}
-        csv={lastConversion.csv}
-      />
+      <ResultPanel filename={lastConversion.filename} provider={lastConversion.provider} csv={lastConversion.csv} />
     {/if}
 
     <HistoryDashboard bind:conversions />

@@ -3,7 +3,7 @@
   import { addConversion } from "$lib/stores/history.js";
   import { fade, fly } from "svelte/transition";
 
-  let { onConversionComplete } = $props();
+  let { onConversionComplete, disabled = false } = $props();
 
   let provider = $state("");
   let file = $state(null);
@@ -50,7 +50,7 @@
   }
 
   async function handleSubmit() {
-    if (!provider || !file) return;
+    if (disabled || !provider || !file) return;
 
     status = "uploading";
     errorMsg = "";
@@ -111,7 +111,7 @@
         id="provider-select"
         class="select select-bordered w-full"
         bind:value={provider}
-        disabled={status === "uploading"}
+        disabled={disabled || status === "uploading"}
       >
         <option value="" disabled>Select a provider</option>
         {#each providers as p}
@@ -132,7 +132,7 @@
         bind:this={fileInput}
         accept=".csv,.pdf"
         onchange={handleFileSelect}
-        disabled={status === "uploading"}
+        disabled={disabled || status === "uploading"}
       />
 
       <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -167,7 +167,7 @@
                 file = null;
                 if (fileInput) fileInput.value = "";
               }}
-              disabled={status === "uploading"}>✕</button
+              disabled={disabled || status === "uploading"}>✕</button
             >
           </div>
         {:else}
@@ -203,14 +203,15 @@
           class="input input-bordered w-full"
           placeholder="Enter password if encrypted"
           bind:value={password}
-          disabled={status === "uploading"}
+          disabled={disabled || status === "uploading"}
         />
       </div>
     {/if}
 
     <button
       class="btn btn-primary w-full"
-      class:btn-disabled={!provider || !file || status === "uploading"}
+      class:btn-disabled={disabled || !provider || !file || status === "uploading"}
+      disabled={disabled || status === "uploading"}
       onclick={handleSubmit}
     >
       {#if status === "uploading"}
