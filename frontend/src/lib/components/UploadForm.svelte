@@ -56,23 +56,8 @@
     errorMsg = "";
 
     try {
-      const response = await convertFile(provider, file, password);
-
-      if (!response.ok) {
-        const errText = await response.text().catch(() => "Conversion failed");
-        throw new Error(errText);
-      }
-
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      const disposition = response.headers.get("Content-Disposition") || "";
-      const match = disposition.match(/filename="([^"]+)"/);
-      const filename = match?.[1] ?? `${provider}_actual_budget.csv`;
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = filename;
-      a.click();
-      URL.revokeObjectURL(url);
+      const { csv } = await convertFile(provider, file, password);
+      if (!csv) throw new Error("No CSV output");
 
       const newHistory = addConversion({
         id: crypto.randomUUID(),
@@ -82,8 +67,7 @@
         success: true,
       });
 
-      status = "success";
-      if (onConversionComplete) onConversionComplete(newHistory);
+      if (onConversionComplete) onConversionComplete({ history: newHistory, csv });
 
       provider = "";
       file = null;

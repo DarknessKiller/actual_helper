@@ -12,6 +12,8 @@
 
   onMount(async () => {
     try {
+      const wasm = new Go();
+      await WebAssembly.instantiateStreaming(fetch("/actual-helper.wasm"), wasm.importObject).then(({ instance }) => wasm.run(instance));
       const res = await fetch("/version");
       const data = await res.json();
       version = data.version;
@@ -20,9 +22,9 @@
     }
   });
 
-  function handleConversionComplete(newHistory) {
-    conversions = newHistory;
-    lastConversion = conversions[0];
+  function handleConversionComplete(result) {
+    conversions = result.history;
+    lastConversion = { ...conversions[0], csv: result.csv };
   }
 </script>
 
@@ -48,6 +50,7 @@
       <ResultPanel
         filename={lastConversion.filename}
         provider={lastConversion.provider}
+        csv={lastConversion.csv}
       />
     {/if}
 
