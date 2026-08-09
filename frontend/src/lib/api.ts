@@ -1,26 +1,12 @@
-import type { ActualBudgetReport, ProviderConfig } from './types'
+import { initWASM, goParse } from './wasm'
 import { extractPDFText } from './pdf-worker'
 import { ocrPDFPages } from './ocr-worker'
-import { parseTNG } from './providers/tng'
-import { parseRYT } from './providers/ryt'
-import { parseHLB } from './providers/hlb'
-import { parseHSBCCredit } from './providers/hsbccredit'
-import { parseUOBCredit } from './providers/uobcredit'
-import { parseGXBank } from './providers/gxbank'
 import { toActualCSVBlob } from './csv'
+import type { ProviderConfig } from './types'
 
-export type { ActualBudgetReport }
+export type { ActualBudgetReport } from './types'
 
 const OCR_PROVIDERS = new Set(['hsbccredit'])
-
-const parsers: Record<string, (text: string, config: ProviderConfig) => ActualBudgetReport[]> = {
-  tng: parseTNG,
-  ryt: parseRYT,
-  hlb: parseHLB,
-  hsbccredit: parseHSBCCredit,
-  uobcredit: parseUOBCredit,
-  gxbank: parseGXBank,
-}
 
 export type ConversionProgress = {
   stage: 'extract' | 'parse' | 'filter' | 'generate'
@@ -55,14 +41,34 @@ export async function convertLocally(
 
   onProgress?.({ stage: 'parse', percent: 0, message: 'Parsing transactions...' })
 
-  const parser = parsers[provider]
-  if (!parser) throw new Error(`Unknown provider: ${provider}`)
+  // Ensure WASM is loaded
+  await initWASM()
 
-  const reports = parser(text, config)
-  onProgress?.({ stage: 'parse', percent: 100, message: `${reports.length} transactions found` })
+  // Call Go WASM
+  const configJSON = JSON.stringify(config)
+  const result = goParse(provider, text, configJSON)
+
+  if (!result.ok) {
+    throw new Error(result.error || 'Parse failed')
+  }
+
+  onProgress?.({ stage: 'parse', percent: 100, message: `${result.count} transactions found` })
 
   onProgress?.({ stage: 'filter', percent: 100 })
   onProgress?.({ stage: 'generate', percent: 0, message: 'Generating CSV...' })
+
+  // Convert WASM result to ActualBudgetReport[]
+  const reports = result.reports.map((r: any) => ({
+    Account: r.Account || '',
+    Date: r.Date || '',
+    Payee: r.Payee || '',
+    Notes: r.Notes || '',
+    Category_Group: r.Category_Group || '',
+    Category: r.Category || '',
+    Amount: r.Amount || '0.00',
+    Split_Amount: r.Split_Amount || '',
+    Cleared: r.Cleared || 'Cleared',
+  }))
 
   const blob = toActualCSVBlob(reports)
   onProgress?.({ stage: 'generate', percent: 100 })

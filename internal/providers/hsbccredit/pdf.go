@@ -88,6 +88,7 @@ func extractStatementDate(lines []string) string {
 }
 
 func findTransactionStart(lines []string) int {
+	// First try to find the header
 	for i, line := range lines {
 		if postHeaderRe.MatchString(line) {
 			for j := i + 1; j < len(lines); j++ {
@@ -103,6 +104,16 @@ func findTransactionStart(lines []string) int {
 				}
 			}
 			return i + 1
+		}
+	}
+	// Fallback: find first transaction line directly
+	for i, line := range lines {
+		candidate := strings.TrimSpace(line)
+		candidate = strings.ReplaceAll(candidate, "|", "")
+		candidate = strings.ReplaceAll(candidate, "[", "")
+		candidate = strings.ReplaceAll(candidate, "]", "")
+		if transactionRe.MatchString(candidate) {
+			return i
 		}
 	}
 	return -1

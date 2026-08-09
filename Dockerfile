@@ -6,6 +6,17 @@ RUN npm ci
 COPY frontend/ .
 RUN npm run build
 
+# Build Go WASM
+FROM golang:1.26-alpine AS wasm
+WORKDIR /src
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+RUN GOOS=js GOARCH=wasm go build -o frontend/static/main.wasm ./cmd/wasm/
+RUN cp "$(go env GOROOT)/lib/wasm/wasm_exec.js" frontend/static/wasm_exec.js
+RUN cp frontend/static/main.wasm frontend/dist/
+RUN cp frontend/static/wasm_exec.js frontend/dist/
+
 # Build Go static server
 FROM golang:1.26-alpine AS server
 WORKDIR /src

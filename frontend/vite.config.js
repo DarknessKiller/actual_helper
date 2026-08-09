@@ -15,9 +15,10 @@ export default defineConfig({
     outDir: 'dist',
     emptyOutDir: true,
     target: 'es2022',
+    assetsInlineLimit: 0,
   },
   optimizeDeps: {
-    include: ['pdfjs-dist', 'tesseract.js'],
+    exclude: ['wasm_exec.js'],
   },
   server: {
     port: 5173,
