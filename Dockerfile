@@ -9,7 +9,7 @@ RUN npm run build
 # Backend build stage
 FROM golang:1.26-alpine AS builder
 WORKDIR /app
-RUN apk add --no-cache gcc g++ musl-dev tesseract-ocr-dev
+RUN apk add --no-cache gcc g++ musl-dev leptonica-dev tesseract-ocr-dev
 ARG VERSION
 COPY go.mod go.sum ./
 RUN go mod download
