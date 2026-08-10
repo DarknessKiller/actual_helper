@@ -3,6 +3,39 @@
   let configError = $state("");
   let input = $state(null);
 
+  const sampleConfig = {
+    global: {
+      exclude_keywords: [],
+      include_keywords: [],
+      categories: [
+        { keyword: "shopee", group: "Shopping", category: "Online" },
+      ],
+    },
+    providers: {
+      tng: { account_mappings: { "": "TNG" } },
+      ryt: { account_mappings: { "": "RYT" } },
+      hsbccredit: { account_mappings: { "1234 5678 9012 3456": "HSBC Credit Card" } },
+      hlb: { account_mappings: { "1234 5678 9012 3456": "HLB Credit Card" } },
+      uobcredit: { account_mappings: { "1234 5678 9012 3456": "UOB Credit Card" } },
+      gxbank: {
+        account_mappings: {
+          "GX Savings Account": "GX Savings",
+          "Secret stash Bonus Pocket": "GX Pocket",
+        },
+      },
+    },
+  };
+
+  function downloadSample() {
+    const blob = new Blob([JSON.stringify(sampleConfig, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "provider_config.example.json";
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   async function importConfig(event) {
     const file = event.target?.files?.[0];
     if (!file) return;
@@ -23,10 +56,13 @@
   <div class="card-body py-4">
     <h2 class="font-semibold">Provider configuration</h2>
     <p class="text-xs text-base-content/60">Load a JSON config locally in this browser session; it is required for conversion and never uploaded.</p>
-    <label class="btn btn-sm btn-outline mt-2 w-fit">
-      Load JSON
-      <input bind:this={input} class="hidden" type="file" accept="application/json,.json" onchange={importConfig} />
-    </label>
+    <div class="flex gap-2 mt-2">
+      <label class="btn btn-sm btn-outline w-fit">
+        Load JSON
+        <input bind:this={input} class="hidden" type="file" accept="application/json,.json" onchange={importConfig} />
+      </label>
+      <button class="btn btn-sm btn-ghost w-fit" onclick={downloadSample}>Download Sample</button>
+    </div>
     {#if configError}<p class="text-sm text-error mt-2" role="alert">{configError}</p>{/if}
   </div>
 </div>

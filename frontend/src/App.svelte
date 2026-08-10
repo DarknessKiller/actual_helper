@@ -16,7 +16,7 @@
   onMount(async () => {
     try {
       const wasm = new Go();
-      const { instance } = await WebAssembly.instantiateStreaming(fetch("/actual-helper.wasm"), wasm.importObject);
+      const { instance } = await WebAssembly.instantiateStreaming(fetch(`/actual-helper.wasm?v=${Date.now()}`), wasm.importObject);
       wasm.run(instance);
       await new Promise((resolve, reject) => {
         const started = Date.now();

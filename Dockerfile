@@ -27,9 +27,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build -tags embed -trimpath \
 FROM alpine:3.23
 WORKDIR /app
 COPY --from=builder /app/actual_helper actual_helper
-COPY --from=builder /app/provider_config.example.json provider_config.example.json
 ENV APP_ENV=production
-ENV PROVIDER_CONFIG_PATH=/app/provider_config.example.json
 ENV PORT=8080
 EXPOSE $PORT
 CMD ["/app/actual_helper"]

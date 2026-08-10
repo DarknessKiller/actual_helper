@@ -75,7 +75,7 @@
       if (!csv) throw new Error("No CSV output");
 
       const newHistory = addConversion({
-        id: crypto.randomUUID(),
+        id: crypto.randomUUID?.() ?? (Date.now().toString(36) + Math.random().toString(36).slice(2)),
         provider,
         filename: file.name,
         timestamp: new Date().toISOString(),
