@@ -4,7 +4,6 @@ package main
 
 import (
 	"context"
-	_ "embed"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -21,9 +20,6 @@ import (
 	"actual_helper/internal/services"
 )
 
-//go:embed provider_config.json
-var providerConfig []byte
-
 type wasmConfig struct {
 	Global    wasmProviderConfig            `json:"global"`
 	Providers map[string]wasmProviderConfig `json:"providers"`
@@ -38,9 +34,6 @@ type wasmProviderConfig struct {
 var currentConfig wasmConfig
 
 func main() {
-	if err := json.Unmarshal(providerConfig, &currentConfig); err != nil {
-		panic(err)
-	}
 	js.Global().Set("actualHelperConvert", js.FuncOf(convert))
 	js.Global().Set("actualHelperParsePDFText", js.FuncOf(parsePDFText))
 	js.Global().Set("actualHelperSetConfig", js.FuncOf(setConfig))
@@ -61,9 +54,7 @@ func setConfig(_ js.Value, args []js.Value) any {
 }
 
 func resetConfig(_ js.Value, _ []js.Value) any {
-	if err := json.Unmarshal(providerConfig, &currentConfig); err != nil {
-		return errorJSON(fmt.Sprintf("invalid bundled provider config: %v", err))
-	}
+	currentConfig = wasmConfig{}
 	return `{"ok":true}`
 }
 
