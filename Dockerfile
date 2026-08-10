@@ -4,7 +4,7 @@ WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
-RUN CGO_ENABLED=0 GOOS=js GOARCH=wasm go build -trimpath -o actual-helper.wasm ./cmd/wasm
+RUN CGO_ENABLED=0 GOOS=js GOARCH=wasm go build -trimpath -ldflags="-s -w" -o actual-helper.wasm ./cmd/wasm
 
 # Frontend build stage
 FROM node:26-alpine AS frontend-builder
@@ -24,7 +24,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build -tags embed -trimpath \
     -o actual_helper ./cmd/app
 
 # Runtime stage
-FROM alpine:3.23
+FROM gcr.io/distroless/static-debian13
 WORKDIR /app
 COPY --from=builder /app/actual_helper actual_helper
 ENV APP_ENV=production

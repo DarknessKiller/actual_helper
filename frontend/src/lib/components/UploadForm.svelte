@@ -22,16 +22,22 @@
   ];
   let fileInput = $state(null);
 
+	const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50 MB
+
   function selectedProvider() {
     return providers.find((p) => p.id === provider);
   }
 
-  function validFile(f) {
-    if (!f) return false;
-    const pdf = isPDF(f);
-    const csv = f.name?.toLowerCase().endsWith(".csv") || f.type === "text/csv";
-    return pdf || (csv && selectedProvider()?.csv);
-  }
+	function validFile(f) {
+		if (!f) return false;
+		if (f.size > MAX_FILE_SIZE) {
+			errorMsg = "File too large. Maximum size is 50 MB.";
+			return false;
+		}
+		const pdf = isPDF(f);
+		const csv = f.name?.toLowerCase().endsWith(".csv") || f.type === "text/csv";
+		return pdf || (csv && selectedProvider()?.csv);
+	}
 
   function handleFileSelect(e) {
     const f = e.target?.files?.[0];
@@ -51,12 +57,16 @@
     dragOver = false;
   }
 
-  function handleDrop(e) {
-    e.preventDefault();
-    dragOver = false;
-    const f = e.dataTransfer?.files?.[0];
-    if (f) file = f;
-  }
+	function handleDrop(e) {
+		e.preventDefault();
+		dragOver = false;
+		const f = e.dataTransfer?.files?.[0];
+		if (validFile(f)) {
+			file = f;
+		} else if (f) {
+			errorMsg = "CSV input is only supported for TNG E-wallet.";
+		}
+	}
 
   function isPDF(f) {
     return (

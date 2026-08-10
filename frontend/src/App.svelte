@@ -13,28 +13,29 @@
   let wasmReady = $state(false);
   let wasmError = $state("");
 
-  onMount(async () => {
-    try {
-      const wasm = new Go();
-      const { instance } = await WebAssembly.instantiateStreaming(fetch(`/actual-helper.wasm?v=${Date.now()}`), wasm.importObject);
-      wasm.run(instance);
-      await new Promise((resolve, reject) => {
-        const started = Date.now();
-        const wait = () => {
-          if (globalThis.actualHelperConvert) return resolve();
-          if (Date.now() - started > 10000) return reject(new Error("Browser converter failed to start"));
-          setTimeout(wait, 25);
-        };
-        wait();
-      });
-      wasmReady = true;
-      const res = await fetch("/version");
-      const data = await res.json();
-      version = data.version;
-    } catch (error) {
-      wasmError = error.message || "Browser converter failed to load";
-    }
-  });
+	onMount(async () => {
+		try {
+			const verRes = await fetch("/version");
+			const verData = await verRes.json();
+			version = verData.version;
+
+			const wasm = new Go();
+			const { instance } = await WebAssembly.instantiateStreaming(fetch(`/actual-helper.wasm?v=${version}`), wasm.importObject);
+			wasm.run(instance);
+			await new Promise((resolve, reject) => {
+				const started = Date.now();
+				const wait = () => {
+					if (globalThis.actualHelperConvert) return resolve();
+					if (Date.now() - started > 10000) return reject(new Error("Browser converter failed to start"));
+					setTimeout(wait, 25);
+				};
+				wait();
+			});
+			wasmReady = true;
+		} catch (error) {
+			wasmError = error.message || "Browser converter failed to load";
+		}
+	});
 
   function handleConversionComplete(result) {
     conversions = result.history;
