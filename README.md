@@ -55,7 +55,7 @@ Only TNG accepts CSV input. All providers accept PDF input; PDF extraction and O
 | | |
 |---|---|
 | **Provider name** | `ryt` |
-| **File formats** | CSV, PDF |
+| **File formats** | PDF only |
 | **Amount sign** | Explicit `+`/`-` prefix in the PDF text |
 | **Date format** | `d Month YYYY` (e.g., `1 May 2026`) |
 | **Special handling** | Opening balance rows are automatically skipped |
@@ -65,7 +65,7 @@ Only TNG accepts CSV input. All providers accept PDF input; PDF extraction and O
 | | |
 |---|---|
 | **Provider name** | `hsbccredit` |
-| **File formats** | CSV, PDF |
+| **File formats** | PDF only |
 | **Credit detection** | Amount suffixed with `CR` (e.g., `259.72CR` = payment received) |
 | **Debit detection** | Plain positive amount (e.g., `8.50` = purchase) |
 | **Date format** | `DD MMM` (year inferred from statement header; cross-year boundary handled) |
