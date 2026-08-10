@@ -86,7 +86,12 @@ func parseTransactions(text string) ([]HSBCReport, error) {
 }
 
 func extractAccountName(text string) string {
-	return cardutil.ExtractAfterMarker(text, "Card Number", "HSBC Credit Card")
+	for _, marker := range []string{"Card Number", "Credit Card Number", "Card No"} {
+		if name := cardutil.ExtractAfterMarker(text, marker, ""); name != "" {
+			return name
+		}
+	}
+	return "HSBC Credit Card"
 }
 
 func extractStatementDate(lines []string) string {

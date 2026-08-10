@@ -232,6 +232,32 @@ Your charge(s) for this month RM259.72`
 		Expect(reports[0].Account).To(Equal("1234 5678 9012 3456"))
 	})
 
+	It("extracts card number with Credit Card Number marker", func() {
+		text := `Credit Card Number: 1234 5678 9012 3456
+Statement Date 04 Jun 2026
+Post date | Transaction date | Transaction details | Amount (RM)
+17 MAY 17 MAY PAYMENT - RECEIVED 259.72CR
+Your charge(s) for this month RM259.72`
+
+		reports, err := provider.ParsePDFText(ctx, text)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(reports).To(HaveLen(1))
+		Expect(reports[0].Account).To(Equal("1234 5678 9012 3456"))
+	})
+
+	It("extracts card number with Card No marker", func() {
+		text := `Card No: 1234 5678 9012 3456
+Statement Date 04 Jun 2026
+Post date | Transaction date | Transaction details | Amount (RM)
+17 MAY 17 MAY PAYMENT - RECEIVED 259.72CR
+Your charge(s) for this month RM259.72`
+
+		reports, err := provider.ParsePDFText(ctx, text)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(reports).To(HaveLen(1))
+		Expect(reports[0].Account).To(Equal("1234 5678 9012 3456"))
+	})
+
 	It("returns error when all rows are zero amount", func() {
 		text := `Statement Date 04 Jun 2026
 Post date | Transaction date | Transaction details | Amount (RM)
