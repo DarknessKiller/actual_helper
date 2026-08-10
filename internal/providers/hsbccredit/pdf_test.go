@@ -77,6 +77,50 @@ Your statement balance 259.72`
 		Expect(reports[0].Notes).To(Equal("PAYMENT - RECEIVED"))
 	})
 
+	It("parses transactions across multiple table headers", func() {
+		text := `Statement Date 04 Jun 2026
+Post date | Transaction date | Transaction details | Amount (RM)
+06 MAY 05 MAY AP Online Retail 8.50
+Your charge(s) for this month RM8.50
+Some page footer noise
+Post date | Transaction date | Transaction details | Amount (RM)
+10 MAY 09 MAY Digital Service 38.00
+15 MAY 14 MAY Ride Service 4.00
+Your charge(s) for this month RM42.00`
+
+		reports, err := provider.ParsePDFText(ctx, text)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(reports).To(HaveLen(3))
+		Expect(reports[0].Amount).To(Equal("-8.50"))
+		Expect(reports[1].Amount).To(Equal("-38.00"))
+		Expect(reports[2].Amount).To(Equal("-4.00"))
+	})
+
+	It("handles RM prefix in amounts", func() {
+		text := `Statement Date 04 Jun 2026
+Post date | Transaction date | Transaction details | Amount (RM)
+17 MAY 17 MAY PAYMENT - RECEIVED RM259.72CR
+06 MAY 05 MAY AP Online Retail MY RM8.50
+Your charge(s) for this month RM8.50`
+
+		reports, err := provider.ParsePDFText(ctx, text)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(reports).To(HaveLen(2))
+		Expect(reports[0].Amount).To(Equal("259.72"))
+		Expect(reports[0].Notes).To(Equal("PAYMENT - RECEIVED"))
+		Expect(reports[1].Amount).To(Equal("-8.50"))
+	})
+
+	It("handles flexible header spacing from OCR", func() {
+		text := `Statement Date 04 Jun 2026
+Post  date  |  Transaction  details  |  Amount
+17 MAY 17 MAY PAYMENT - RECEIVED 259.72CR`
+
+		reports, err := provider.ParsePDFText(ctx, text)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(reports).To(HaveLen(1))
+	})
+
 	It("returns error for text without statement date", func() {
 		_, err := provider.ParsePDFText(ctx, "random text")
 		Expect(err).To(HaveOccurred())
