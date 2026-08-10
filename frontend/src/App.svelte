@@ -49,7 +49,7 @@
     </div>
     <div class="flex-none pr-4">
       {#if version}
-        <span class="badge badge-soft badge-accent">v{version}</span>
+        <span class="badge badge-soft badge-accent">{version}</span>
       {/if}
     </div>
   </div>
