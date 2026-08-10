@@ -96,6 +96,22 @@ Your charge(s) for this month RM42.00`
 		Expect(reports[2].Amount).To(Equal("-4.00"))
 	})
 
+	It("stops parsing at summary line, footer content excluded", func() {
+		text := `Statement Date 04 Jun 2026
+		Post date | Transaction date | Transaction details | Amount (RM)
+		06 MAY 05 MAY AP Online Retail 8.50
+		17 MAY 17 MAY PAYMENT - RECEIVED 259.72CR
+		Your charge(s) for this month RM268.22
+		Some footer noise that looks like a transaction 10 JUN 10 JUN Fake Transaction 99.00
+		Page 1 of 3 | HSBC Credit Card`
+
+		reports, err := provider.ParsePDFText(ctx, text)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(reports).To(HaveLen(2))
+		Expect(reports[0].Notes).To(Equal("AP Online Retail"))
+		Expect(reports[1].Notes).To(Equal("PAYMENT - RECEIVED"))
+	})
+
 	It("handles RM prefix in amounts", func() {
 		text := `Statement Date 04 Jun 2026
 Post date | Transaction date | Transaction details | Amount (RM)
@@ -224,4 +240,18 @@ Post date | Transaction date | Transaction details | Amount (RM)
 		_, err := provider.ParsePDFText(ctx, text)
 		Expect(err).To(MatchError("no transactions found after filtering"))
 	})
+
+	It("parses transactions when header is missing (OCR mangled)", func() {
+		text := `Statement Date 04 Jun 2026
+		Some garbled header line from OCR
+		06 MAY 05 MAY AP Online Retail 8.50
+		17 MAY 17 MAY PAYMENT - RECEIVED 259.72CR`
+
+		reports, err := provider.ParsePDFText(ctx, text)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(reports).To(HaveLen(2))
+		Expect(reports[0].Amount).To(Equal("-8.50"))
+		Expect(reports[1].Amount).To(Equal("259.72"))
+	})
+
 })

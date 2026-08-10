@@ -45,7 +45,7 @@ func parseTransactions(text string) ([]HSBCReport, error) {
 
 	headers := findTransactionHeaders(lines)
 	if len(headers) == 0 {
-		return nil, errors.New("no transaction section found in text")
+		headers = []int{0}
 	}
 
 	var reports []HSBCReport
@@ -55,6 +55,7 @@ func parseTransactions(text string) ([]HSBCReport, error) {
 		if idx+1 < len(headers) {
 			end = headers[idx+1]
 		}
+		seenTransaction := false
 		for i := headerLine + 1; i < end; i++ {
 			line := strings.TrimSpace(lines[i])
 			line = strings.ReplaceAll(line, "|", "")
@@ -66,6 +67,9 @@ func parseTransactions(text string) ([]HSBCReport, error) {
 			}
 
 			if isSummaryLine(line) {
+				if seenTransaction {
+					break
+				}
 				continue
 			}
 
@@ -73,6 +77,7 @@ func parseTransactions(text string) ([]HSBCReport, error) {
 			if err != nil {
 				continue
 			}
+			seenTransaction = true
 			reports = append(reports, report)
 		}
 	}
