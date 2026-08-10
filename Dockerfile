@@ -16,15 +16,11 @@ COPY --from=wasm-builder /app/actual-helper.wasm public/actual-helper.wasm
 RUN npm run build
 
 # Backend build stage
-FROM golang:1.26-alpine AS builder
-WORKDIR /app
+FROM wasm-builder AS builder
 ARG VERSION
-COPY go.mod go.sum ./
-RUN go mod download
-COPY . .
 COPY --from=frontend-builder /app/dist frontend/dist
 RUN CGO_ENABLED=0 GOOS=linux go build -tags embed -trimpath \
-    -ldflags="-s -w -X actual_helper/internal/config.Version=${VERSION:-$(git describe --tags --always --dirty)}" \
+    -ldflags="-s -w -X actual_helper/internal/config.Version=${VERSION:-unknown}" \
     -o actual_helper ./cmd/app
 
 # Runtime stage
