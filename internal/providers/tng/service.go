@@ -2,6 +2,7 @@ package tng
 
 import (
 	"context"
+	"encoding/csv"
 	"errors"
 	"io"
 	"log/slog"
@@ -69,8 +70,33 @@ func (p *TNGProvider) Name() string {
 	return "tng"
 }
 
-func (p *TNGProvider) ParseCSV(_ context.Context, _ io.Reader) ([]models.ActualBudgetReport, error) {
-	return nil, errors.New("not supported for tng provider")
+func (p *TNGProvider) ParseCSV(ctx context.Context, r io.Reader) ([]models.ActualBudgetReport, error) {
+	records, err := csv.NewReader(r).ReadAll()
+	if err != nil {
+		return nil, err
+	}
+	if len(records) < 2 {
+		return nil, errors.New("no CSV records found")
+	}
+	var reports []TNGReport
+	header := make(map[string]int)
+	for i, name := range records[0] {
+		header[strings.TrimSpace(name)] = i
+	}
+	for _, row := range records[1:] {
+		get := func(name string) string {
+			if i, ok := header[name]; ok && i < len(row) {
+				return row[i]
+			}
+			return ""
+		}
+		reports = append(reports, TNGReport{Date: get("F"), Status: get("Status"), TransactionType: get("Transaction Type"), Description: get("Description"), Amount: get("Amount(RM)")})
+	}
+	result := p.toActualReports(ctx, slog.With("provider", "tng", "format", "csv"), reports, "")
+	if len(result) == 0 {
+		return nil, errors.New("no transactions found after filtering")
+	}
+	return result, nil
 }
 
 func (p *TNGProvider) toActualReports(ctx context.Context, logger *slog.Logger, reports []TNGReport, accountName string) []models.ActualBudgetReport {

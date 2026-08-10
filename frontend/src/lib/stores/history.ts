@@ -4,6 +4,7 @@ interface Conversion {
   filename: string
   timestamp: string
   success: boolean
+  csv?: string
 }
 
 const STORAGE_KEY = 'actual-helper-conversions'
@@ -18,7 +19,10 @@ export function loadHistory(): Conversion[] {
 }
 
 export function saveHistory(conversions: Conversion[]): void {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(conversions))
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(conversions.map(({ csv, ...conversion }) => conversion)))
+  } catch {
+  }
 }
 
 export function addConversion(conversion: Conversion): Conversion[] {
@@ -29,7 +33,10 @@ export function addConversion(conversion: Conversion): Conversion[] {
 }
 
 export function clearHistory(): void {
-  localStorage.removeItem(STORAGE_KEY)
+  try {
+    localStorage.removeItem(STORAGE_KEY)
+  } catch {
+  }
 }
 
 export type { Conversion }
