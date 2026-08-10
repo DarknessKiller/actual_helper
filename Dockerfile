@@ -1,9 +1,18 @@
+# Browser WASM build stage
+FROM golang:1.26-alpine AS wasm-builder
+WORKDIR /app
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+RUN CGO_ENABLED=0 GOOS=js GOARCH=wasm go build -trimpath -o actual-helper.wasm ./cmd/wasm
+
 # Frontend build stage
 FROM node:26-alpine AS frontend-builder
 WORKDIR /app
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci
 COPY frontend/ .
+COPY --from=wasm-builder /app/actual-helper.wasm public/actual-helper.wasm
 RUN npm run build
 
 # Backend build stage
