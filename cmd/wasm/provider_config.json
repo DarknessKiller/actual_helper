@@ -1,0 +1,122 @@
+{
+  "global": {
+    "exclude_keywords": [],
+    "include_keywords": [],
+    "categories": [
+      {
+        "keyword": "shopee",
+        "group": "Shopping",
+        "category": "Online"
+      }
+    ]
+  },
+  "providers": {
+    "tng": {
+      "account_mappings": {
+        "": "TNG"
+      },
+      "exclude_keywords": [
+        "Quick Reload Payment",
+        "Via eWallet to GO+",
+        "Daily Interest"
+      ],
+      "include_keywords": [],
+      "categories": [
+        {
+          "keyword": "grab",
+          "group": "Food & Dining",
+          "category": "Delivery"
+        },
+        {
+          "keyword": "foodpanda",
+          "group": "Food & Dining",
+          "category": "Delivery"
+        },
+        {
+          "keyword": "ninja van",
+          "group": "Delivery",
+          "category": "Parcel"
+        },
+        {
+          "keyword": "7-eleven",
+          "group": "Food & Dining",
+          "category": "Convenience"
+        },
+        {
+          "keyword": "top up",
+          "group": "Income",
+          "category": "eWallet"
+        },
+        {
+          "keyword": "zus coffee",
+          "group": "",
+          "category": "Refreshment"
+        }
+      ]
+    },
+    "ryt": {
+      "account_mappings": {
+        "": "RYT"
+      }
+    },
+    "hsbccredit": {
+      "account_mappings": {
+        "1234 5678 9012 3456": "HSBC Credit Card"
+      }
+    },
+    "hlb": {
+      "account_mappings": {
+        "1234 5678 9012 3456": "HLB Credit Card",
+        "12345678901": "HLB Savings"
+      },
+      "exclude_keywords": [],
+      "include_keywords": [],
+      "categories": [
+        {
+          "keyword": "grab",
+          "group": "Food & Dining",
+          "category": "Delivery"
+        }
+      ]
+    },
+    "uobcredit": {
+      "account_mappings": {
+        "1234 5678 9012 3456": "UOB Credit Card"
+      },
+      "exclude_keywords": [],
+      "include_keywords": [],
+      "categories": [
+        {
+          "keyword": "grab",
+          "group": "Food & Dining",
+          "category": "Delivery"
+        }
+      ]
+    },
+    "gxbank": {
+      "account_mappings": {
+        "GX Savings Account": "GX Savings",
+        "Secret stash Bonus Pocket": "GX Pocket"
+      },
+      "exclude_keywords": [],
+      "include_keywords": [],
+      "categories": [
+        {
+          "keyword": "interest earned",
+          "group": "Income",
+          "category": "Interest"
+        },
+        {
+          "keyword": "duitnow",
+          "group": "Transfer",
+          "category": "DuitNow"
+        },
+        {
+          "keyword": "pocket",
+          "group": "Transfer",
+          "category": "Pocket"
+        }
+      ]
+    }
+  }
+}

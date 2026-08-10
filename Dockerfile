@@ -1,21 +1,29 @@
+# Browser WASM build stage
+FROM golang:1.26-alpine AS wasm-builder
+WORKDIR /app
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+RUN CGO_ENABLED=0 GOOS=js GOARCH=wasm go build -trimpath -o actual-helper.wasm ./cmd/wasm
+
 # Frontend build stage
 FROM node:26-alpine AS frontend-builder
 WORKDIR /app
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci
 COPY frontend/ .
+COPY --from=wasm-builder /app/actual-helper.wasm public/actual-helper.wasm
 RUN npm run build
 
 # Backend build stage
 FROM golang:1.26-alpine AS builder
 WORKDIR /app
-RUN apk add --no-cache gcc g++ musl-dev tesseract-ocr-dev
 ARG VERSION
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
 COPY --from=frontend-builder /app/dist frontend/dist
-RUN CGO_ENABLED=1 GOOS=linux go build -tags embed -trimpath \
+RUN CGO_ENABLED=0 GOOS=linux go build -tags embed -trimpath \
     -ldflags="-s -w -X actual_helper/internal/config.Version=${VERSION:-$(git describe --tags --always --dirty)}" \
     -o actual_helper ./cmd/app
 

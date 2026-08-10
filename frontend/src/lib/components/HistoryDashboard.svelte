@@ -5,6 +5,7 @@
   let { conversions = $bindable([]) } = $props();
 
   let providerFilter = $state("");
+  let expanded = $state("");
 
   let stats = $derived({
     total: conversions.length,
@@ -92,25 +93,25 @@
       <div class="flex flex-col gap-2">
         {#each filtered as conversion (conversion.id)}
           <div
-            class="flex items-center justify-between p-3 rounded-lg bg-base-200/50 hover:bg-base-200 transition-colors"
+            class="p-3 rounded-lg bg-base-200/50 hover:bg-base-200 transition-colors"
             in:slide={{ duration: 300 }}
           >
-            <div class="flex items-center gap-3 min-w-0 flex-1">
-              <span class="badge badge-outline badge-sm"
-                >{conversion.provider.toUpperCase()}</span
-              >
-              <div class="min-w-0 flex-1">
-                <p class="text-sm font-medium truncate">
-                  {conversion.filename}
-                </p>
-                <p class="text-xs text-base-content/40">
-                  {formatDate(conversion.timestamp)}
-                </p>
+            <button
+              class="flex items-center justify-between w-full text-left"
+              onclick={() => (expanded = expanded === conversion.id ? "" : conversion.id)}
+            >
+              <div class="flex items-center gap-3 min-w-0 flex-1">
+                <span class="badge badge-outline badge-sm">{conversion.provider.toUpperCase()}</span>
+                <div class="min-w-0 flex-1">
+                  <p class="text-sm font-medium truncate">{conversion.filename}</p>
+                  <p class="text-xs text-base-content/40">{formatDate(conversion.timestamp)}</p>
+                </div>
               </div>
-            </div>
-            <div class="badge badge-success badge-sm gap-1 shrink-0">
-              ✓ Done
-            </div>
+              <div class="badge badge-success badge-sm gap-1 shrink-0">✓ Done</div>
+            </button>
+            {#if expanded === conversion.id && conversion.csv}
+              <textarea class="textarea textarea-bordered w-full mt-2 font-mono text-xs" rows="8" readonly value={conversion.csv}></textarea>
+            {/if}
           </div>
         {/each}
       </div>

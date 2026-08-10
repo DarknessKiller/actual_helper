@@ -1,13 +1,13 @@
 # Actual Helper
 
-A Go web server that converts bank and fintech transaction files into [Actual Budget](https://actualbudget.org)-compatible CSV format. Supports multiple financial providers and file formats (CSV, PDF) through a single REST API.
+A Go web server with a browser-based converter that turns bank and fintech transaction files into [Actual Budget](https://actualbudget.org)-compatible CSV format. Raw CSV/PDF files, PDF extraction, OCR, and provider parsing stay on the device; the server serves the application and version endpoint only.
 
 ---
 
 ## Features
 
-- **Multi-provider architecture** — each financial institution gets its own provider package; easy to extend
-- **CSV & PDF support** — including password-protected PDFs via decryption
+- **Browser-local conversion** — CSV parsing, digital PDF extraction, scanned-PDF OCR, and provider conversion run in WebAssembly and browser libraries; documents never reach the server
+- **Session-only results** — generated CSV is shown in the current session and is not offered as a download
 - **Hot-reload configuration** — update filters, categories, and account mappings without restarting the server; takes effect on the next request
 - **Smart filtering** — `exclude_keywords` removes noise; `include_keywords` overrides exclusions to keep important rows
 - **Auto-categorization** — case-insensitive keyword matching with global and per-provider category rules; first match wins
@@ -36,12 +36,16 @@ Configuration is checked on every request by comparing the config file's mtime. 
 
 ## Supported Providers
 
+### Supported input formats
+
+All providers accept CSV input in the browser. PDF input is extracted locally with PDF.js; scanned PDFs fall back to Tesseract.js OCR. Password-protected PDFs can be opened with the password entered in the browser.
+
 ### TNG (Touch 'n Go eWallet)
 
 | | |
 |---|---|
 | **Provider name** | `tng` |
-| **File formats** | PDF only |
+| **File formats** | CSV, PDF |
 | **Credit detection** | Transaction type-based: Reload, Receive from Wallet, DUITNOW_RECEIVEFROM, Refund, GO+ Daily Earnings, GO+ Cash In |
 | **Debit detection** | All other transaction types |
 | **Filtering** | Reference token detection skips lines with long reference IDs or known prefixes (TNGD, TNGQR, TNGOW) |
@@ -51,7 +55,7 @@ Configuration is checked on every request by comparing the config file's mtime. 
 | | |
 |---|---|
 | **Provider name** | `ryt` |
-| **File formats** | PDF only |
+| **File formats** | CSV, PDF |
 | **Amount sign** | Explicit `+`/`-` prefix in the PDF text |
 | **Date format** | `d Month YYYY` (e.g., `1 May 2026`) |
 | **Special handling** | Opening balance rows are automatically skipped |
@@ -61,7 +65,7 @@ Configuration is checked on every request by comparing the config file's mtime. 
 | | |
 |---|---|
 | **Provider name** | `hsbccredit` |
-| **File formats** | PDF only (image-based, OCR via tesseract + gosseract) |
+| **File formats** | CSV, PDF |
 | **Credit detection** | Amount suffixed with `CR` (e.g., `259.72CR` = payment received) |
 | **Debit detection** | Plain positive amount (e.g., `8.50` = purchase) |
 | **Date format** | `DD MMM` (year inferred from statement header; cross-year boundary handled) |
@@ -128,33 +132,13 @@ Configuration is checked on every request by comparing the config file's mtime. 
 
 ---
 
-## API Reference
+## Server endpoints
 
-### POST /convert/{provider}
-
-Converts a transaction file from the specified provider into Actual Budget CSV format.
-
-**Request:** Multipart form data
-
-| Field | Type | Required | Description |
-|---|---|---|---|
-| `file` | file | yes | The transaction file (CSV or PDF) |
-| `password` | string | no | Password for encrypted PDF files |
-
-**Response:** `200 OK` with `Content-Type: text/csv` and `Content-Disposition: attachment`
-
-**Errors:**
-
-| Status | Body |
-|---|---|
-| `400` | Missing file in request |
-| `500` | Unknown provider or processing error |
-
----
+The server serves the frontend and exposes `GET /version`. Conversion happens in the browser; there is no document-upload conversion endpoint.
 
 ## Configuration
 
-Set the `PROVIDER_CONFIG_PATH` environment variable to point to a JSON configuration file.
+Provider rules are bundled into the WebAssembly build from `cmd/wasm/provider_config.json`. The server-side `PROVIDER_CONFIG_PATH` setting remains available for the Go provider/service packages and server-side tooling.
 
 ### Schema
 

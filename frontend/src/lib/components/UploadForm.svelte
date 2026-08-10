@@ -3,7 +3,7 @@
   import { addConversion } from "$lib/stores/history.js";
   import { fade, fly } from "svelte/transition";
 
-  let { onConversionComplete } = $props();
+  let { onConversionComplete, disabled = false } = $props();
 
   let provider = $state("");
   let file = $state(null);
@@ -50,29 +50,14 @@
   }
 
   async function handleSubmit() {
-    if (!provider || !file) return;
+    if (disabled || !provider || !file) return;
 
     status = "uploading";
     errorMsg = "";
 
     try {
-      const response = await convertFile(provider, file, password);
-
-      if (!response.ok) {
-        const errText = await response.text().catch(() => "Conversion failed");
-        throw new Error(errText);
-      }
-
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      const disposition = response.headers.get("Content-Disposition") || "";
-      const match = disposition.match(/filename="([^"]+)"/);
-      const filename = match?.[1] ?? `${provider}_actual_budget.csv`;
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = filename;
-      a.click();
-      URL.revokeObjectURL(url);
+      const { csv } = await convertFile(provider, file, password);
+      if (!csv) throw new Error("No CSV output");
 
       const newHistory = addConversion({
         id: crypto.randomUUID(),
@@ -80,11 +65,12 @@
         filename: file.name,
         timestamp: new Date().toISOString(),
         success: true,
+        csv,
       });
 
-      status = "success";
-      if (onConversionComplete) onConversionComplete(newHistory);
+      if (onConversionComplete) onConversionComplete({ history: newHistory, csv });
 
+      status = "idle";
       provider = "";
       file = null;
       password = "";
@@ -126,7 +112,7 @@
         id="provider-select"
         class="select select-bordered w-full"
         bind:value={provider}
-        disabled={status === "uploading"}
+        disabled={disabled || status === "uploading"}
       >
         <option value="" disabled>Select a provider</option>
         {#each providers as p}
@@ -147,7 +133,7 @@
         bind:this={fileInput}
         accept=".csv,.pdf"
         onchange={handleFileSelect}
-        disabled={status === "uploading"}
+        disabled={disabled || status === "uploading"}
       />
 
       <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -182,7 +168,7 @@
                 file = null;
                 if (fileInput) fileInput.value = "";
               }}
-              disabled={status === "uploading"}>✕</button
+              disabled={disabled || status === "uploading"}>✕</button
             >
           </div>
         {:else}
@@ -218,14 +204,15 @@
           class="input input-bordered w-full"
           placeholder="Enter password if encrypted"
           bind:value={password}
-          disabled={status === "uploading"}
+          disabled={disabled || status === "uploading"}
         />
       </div>
     {/if}
 
     <button
       class="btn btn-primary w-full"
-      class:btn-disabled={!provider || !file || status === "uploading"}
+      class:btn-disabled={disabled || !provider || !file || status === "uploading"}
+      disabled={disabled || status === "uploading"}
       onclick={handleSubmit}
     >
       {#if status === "uploading"}
