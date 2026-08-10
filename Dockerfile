@@ -6,14 +6,6 @@ RUN npm ci
 COPY frontend/ .
 RUN npm run build
 
-# Frontend build stage
-FROM node:26-alpine AS frontend-builder
-WORKDIR /app
-COPY frontend/package.json frontend/package-lock.json ./
-RUN npm ci
-COPY frontend/ .
-RUN npm run build
-
 # Backend build stage
 FROM golang:1.26-alpine AS builder
 WORKDIR /app
