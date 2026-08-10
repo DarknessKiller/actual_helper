@@ -1,14 +1,14 @@
 # Actual Helper
 
-A Go web server with a browser-based converter that turns bank and fintech transaction files into [Actual Budget](https://actualbudget.org)-compatible CSV format. Raw CSV/PDF files, PDF extraction, OCR, and provider parsing stay on the device; the server serves the application and version endpoint only.
+A Go web server that serves a browser-based converter for bank and fintech transaction files into [Actual Budget](https://actualbudget.org)-compatible CSV format. All conversion — CSV parsing, PDF extraction, OCR, and provider logic — runs in the browser via WebAssembly. Raw documents never reach the server.
 
 ---
 
 ## Features
 
-- **Browser-local conversion** — CSV parsing, digital PDF extraction, scanned-PDF OCR, and provider conversion run in WebAssembly and browser libraries; documents never reach the server
+- **Browser-local conversion** — CSV parsing, digital PDF extraction (PDF.js), scanned-PDF OCR (Tesseract.js), and provider conversion run entirely in the browser; documents never leave the device
 - **Session-only results** — generated CSV is shown in the current session and is not offered as a download
-- **Hot-reload configuration** — update filters, categories, and account mappings without restarting the server; takes effect on the next request
+- **Browser-side configuration** — load a JSON config file in the browser to set filters, categories, and account mappings; no server restart needed
 - **Smart filtering** — `exclude_keywords` removes noise; `include_keywords` overrides exclusions to keep important rows
 - **Auto-categorization** — case-insensitive keyword matching with global and per-provider category rules; first match wins
 - **Account name mapping** — maps provider-specific account names to Actual Budget account names
@@ -19,18 +19,19 @@ A Go web server with a browser-based converter that turns bank and fintech trans
 ## Architecture
 
 ```
-Handler → Service → Provider
+Browser UI → PDF.js / Tesseract.js → Go WASM providers → CSV
+Server     → static frontend + /version endpoint only
 ```
 
-The project follows strict three-layer separation:
+The Go providers compile to WebAssembly (`actual-helper.wasm`) and run in the browser. The server is a pure static file server with a version endpoint — it never sees user documents.
 
-- **Handler** — parses HTTP requests, validates input, calls the service, returns responses. No business logic.
-- **Service** — orchestrates conversion: looks up providers, reloads config, routes to CSV or PDF parsing, serializes output.
-- **Provider** — parses provider-specific file formats and maps fields to the shared output model.
+### How conversion works
 
-### Hot-Reload Design
-
-Configuration is checked on every request by comparing the config file's mtime. No background goroutines or server restarts needed — changes apply instantly to the next request. Missing or invalid config logs a warning and returns empty rules; the server never crashes due to config issues.
+1. User selects a provider and drops a CSV or PDF file
+2. For PDFs: PDF.js extracts text digitally; if that fails, Tesseract.js performs OCR
+3. The extracted text (or raw CSV) is passed to the Go WASM provider
+4. The provider parses transactions, applies filtering and categorization rules
+5. `services.ToActualCSV` serializes the result to Actual Budget CSV format
 
 ---
 
@@ -38,7 +39,7 @@ Configuration is checked on every request by comparing the config file's mtime. 
 
 ### Supported input formats
 
-Only TNG accepts CSV input. All providers accept PDF input; PDF extraction and OCR stay in the browser. Password-protected PDFs can be opened with the password entered in the browser.
+Only TNG accepts CSV input. All providers accept PDF input; PDF extraction and OCR run in the browser. Password-protected PDFs can be opened with the password entered in the browser.
 
 ### TNG (Touch 'n Go eWallet)
 
@@ -103,7 +104,7 @@ Only TNG accepts CSV input. All providers accept PDF input; PDF extraction and O
 | | |
 |---|---|
 | **Provider name** | `gxbank` |
-| **File formats** | PDF only (digital extraction via ledongthuc/pdf) |
+| **File formats** | PDF only (digital extraction via PDF.js) |
 | **Credit detection** | Amount prefixed with `+` (e.g., `+100.00`) |
 | **Debit detection** | Amount prefixed with `-` (e.g., `-50.00`) |
 | **Date format** | `d Month YYYY` (e.g., `1 May 2026`) |
@@ -123,29 +124,29 @@ Only TNG accepts CSV input. All providers accept PDF input; PDF extraction and O
        ExtractionMethod() pdfutil.ExtractionMethod
    }
    ```
-3. Implement `ConfigurableProvider` if the provider supports config-driven filtering/categorization
+3. Add a factory function `New(excludeKeywords, includeKeywords []string, categories []models.CategoryRule, accountMappings map[string]string) providers.Provider`
 4. For credit card providers, use `internal/providers/cardutil` for card number extraction and account mapping:
    - `cardutil.ExtractAfterMarker(text, marker, fallback)` — extract card number after a text marker
    - `cardutil.ExtractNearCardType(text, cardTypes, fallback)` — extract card number near card type indicators
    - `cardutil.ApplyMapping(mapping, name)` — apply account name mapping from config
-5. Register the provider in `cmd/app/main.go`
+5. Register the provider factory in `cmd/wasm/main.go`
 
 ---
 
-## Server endpoints
+## Server
 
-The server serves the frontend and exposes `GET /version`. Conversion happens in the browser; there is no document-upload conversion endpoint.
+The server is a static file server. It serves the frontend SPA and exposes `GET /version`. There is no document-upload conversion endpoint — all conversion happens in the browser.
+
+---
 
 ## Configuration
 
-Provider rules are bundled into the WebAssembly build from `cmd/wasm/provider_config.json`. The server-side `PROVIDER_CONFIG_PATH` setting remains available for the Go provider/service packages and server-side tooling.
+Provider rules are loaded in the browser. Use **Load JSON** in the UI to replace them for the current session, or **Download Sample** to get a template. The JSON file is read locally and never uploaded or persisted.
 
-### Configuration
+The config schema:
 
-Provider rules are bundled into the WebAssembly build by default. Use **Load JSON** in the browser to replace them for the current session, or **Reset** to restore the bundled defaults. The JSON file is read locally and never uploaded or persisted. The config schema is the same as `provider_config.example.json`.
-
-The server-side `PROVIDER_CONFIG_PATH` setting remains available for Go provider/service packages and server-side tooling; it does not alter an already-built browser bundle.
-
+```json
+{
   "global": {
     "exclude_keywords": ["Global Noise"],
     "include_keywords": [],
@@ -216,7 +217,7 @@ The server-side `PROVIDER_CONFIG_PATH` setting remains available for Go provider
 | `categories` | Global rules first, then provider-specific rules appended; first match wins |
 | `account_mappings` | Provider-specific only |
 
-Config file is optional. If missing, invalid, or unset, the server logs a warning and runs without filtering or categorization.
+If no config is loaded, conversion runs without filtering or categorization.
 
 ---
 
@@ -238,7 +239,7 @@ Each package has its own test suite covering success paths, failure paths, and e
 |---|---|
 | **Language** | Go 1.26 |
 | **Web framework** | [Fuego](https://github.com/go-fuego/fuego) |
+| **Frontend** | Svelte 5, Vite, Tailwind CSS, DaisyUI |
+| **PDF extraction** | PDF.js (digital), Tesseract.js (OCR fallback) |
+| **Provider runtime** | Go compiled to WebAssembly |
 | **Testing** | Ginkgo v2, Gomega, httptest |
-| **PDF extraction** | ledongthuc/pdf (digital), pdftotext (text extraction), tesseract + gosseract (OCR fallback) |
-| **PDF decryption** | pdfcpu |
-| **PDF rendering** | poppler-utils (pdftoppm) |

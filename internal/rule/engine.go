@@ -22,13 +22,6 @@ func NewEngine(excludeKeywords, includeKeywords []string, categories []models.Ca
 	}
 }
 
-func (e *Engine) Reload(excludeKeywords, includeKeywords []string, categories []models.CategoryRule) {
-	e.mu.Lock()
-	defer e.mu.Unlock()
-	e.excludeKeywords = lowerSlice(excludeKeywords)
-	e.includeKeywords = lowerSlice(includeKeywords)
-	e.categories = copyCategories(categories)
-}
 
 func (e *Engine) ShouldSkip(description string) bool {
 	e.mu.RLock()

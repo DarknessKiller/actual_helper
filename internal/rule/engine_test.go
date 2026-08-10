@@ -110,15 +110,4 @@ var _ = Describe("Engine", func() {
 			Expect(cat).To(Equal("Delivery"))
 		})
 	})
-
-	Describe("Reload", func() {
-		It("replaces keywords and categories", func() {
-			e := rule.NewEngine([]string{"old"}, nil, nil)
-			Expect(e.ShouldSkip("old")).To(BeTrue())
-
-			e.Reload([]string{"new"}, nil, nil)
-			Expect(e.ShouldSkip("old")).To(BeFalse())
-			Expect(e.ShouldSkip("new")).To(BeTrue())
-		})
-	})
 })

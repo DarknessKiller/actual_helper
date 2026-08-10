@@ -55,7 +55,7 @@
 <div class="card bg-base-100 shadow-sm mb-4">
   <div class="card-body py-4">
     <h2 class="font-semibold">Provider configuration</h2>
-    <p class="text-xs text-base-content/60">Load a JSON config locally in this browser session; it is required for conversion and never uploaded.</p>
+    <p class="text-xs text-base-content/60">Load a JSON config to set filters, categories, and account mappings for this browser session. Never uploaded.</p>
     <div class="flex gap-2 mt-2">
       <label class="btn btn-sm btn-outline w-fit">
         Load JSON

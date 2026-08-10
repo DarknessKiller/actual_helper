@@ -10,7 +10,6 @@ import (
 	"sync"
 
 	"actual_helper/internal/models"
-	"actual_helper/internal/pdfutil"
 	"actual_helper/internal/providers"
 	"actual_helper/internal/providers/cardutil"
 	"actual_helper/internal/rule"
@@ -29,12 +28,6 @@ func New(excludeKeywords, includeKeywords []string, categories []models.Category
 	}
 }
 
-func (p *HSBCProvider) Reload(excludeKeywords, includeKeywords []string, categories []models.CategoryRule, accountMappings map[string]string) {
-	p.engine.Reload(excludeKeywords, includeKeywords, categories)
-	p.mu.Lock()
-	p.accountMapping = accountMappings
-	p.mu.Unlock()
-}
 
 func (p *HSBCProvider) shouldSkip(description string) bool {
 	return p.engine.ShouldSkip(description)
@@ -114,6 +107,3 @@ func (p *HSBCProvider) toActualReports(ctx context.Context, logger *slog.Logger,
 	return result
 }
 
-func (p *HSBCProvider) ExtractionMethod() pdfutil.ExtractionMethod {
-	return pdfutil.ExtractionMethodOCR
-}
