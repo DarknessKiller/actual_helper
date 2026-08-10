@@ -38,7 +38,7 @@ Configuration is checked on every request by comparing the config file's mtime. 
 
 ### Supported input formats
 
-All providers accept CSV input in the browser. PDF input is extracted locally with PDF.js; scanned PDFs fall back to Tesseract.js OCR. Password-protected PDFs can be opened with the password entered in the browser.
+Only TNG accepts CSV input. All providers accept PDF input; PDF extraction and OCR stay in the browser. Password-protected PDFs can be opened with the password entered in the browser.
 
 ### TNG (Touch 'n Go eWallet)
 
@@ -76,7 +76,7 @@ All providers accept CSV input in the browser. PDF input is extracted locally wi
 | | |
 |---|---|
 | **Provider name** | `hlb` |
-| **File formats** | PDF only (digital extraction via pdftotext) |
+| **File formats** | PDF only (digital extraction via PDF.js) |
 | **Statement types** | Credit card and debit account — auto-detected from PDF content |
 | **Credit card detection** | Amount suffixed with `CR` (e.g., `45.90 CR`) |
 | **Credit card debit detection** | Plain positive amount (e.g., `19.05`) |
@@ -90,7 +90,7 @@ All providers accept CSV input in the browser. PDF input is extracted locally wi
 | | |
 |---|---|
 | **Provider name** | `uobcredit` |
-| **File formats** | PDF only (digital extraction via pdftotext) |
+| **File formats** | PDF only (digital extraction via PDF.js) |
 | **Credit detection** | Amount suffixed with `CR` (e.g., `326.76 CR`) |
 | **Debit detection** | Plain positive amount (e.g., `89.00`) |
 | **Date format** | `DD MMM` (year inferred from statement date; cross-year boundary handled) |
@@ -140,10 +140,12 @@ The server serves the frontend and exposes `GET /version`. Conversion happens in
 
 Provider rules are bundled into the WebAssembly build from `cmd/wasm/provider_config.json`. The server-side `PROVIDER_CONFIG_PATH` setting remains available for the Go provider/service packages and server-side tooling.
 
-### Schema
+### Configuration
 
-```json
-{
+Provider rules are bundled into the WebAssembly build by default. Use **Load JSON** in the browser to replace them for the current session, or **Reset** to restore the bundled defaults. The JSON file is read locally and never uploaded or persisted. The config schema is the same as `provider_config.example.json`.
+
+The server-side `PROVIDER_CONFIG_PATH` setting remains available for Go provider/service packages and server-side tooling; it does not alter an already-built browser bundle.
+
   "global": {
     "exclude_keywords": ["Global Noise"],
     "include_keywords": [],
