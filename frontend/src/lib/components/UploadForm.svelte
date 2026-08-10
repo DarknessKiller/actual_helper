@@ -3,7 +3,7 @@
   import { addConversion } from "$lib/stores/history.js";
   import { fade, fly } from "svelte/transition";
 
-  let { onConversionComplete } = $props();
+  let { onConversionComplete, disabled = false } = $props();
 
   let provider = $state("");
   let file = $state(null);
@@ -13,20 +13,41 @@
   let dragOver = $state(false);
 
   const providers = [
-    { id: "tng", label: "TNG E-wallet" },
-    { id: "ryt", label: "RYT Bank" },
-    { id: "hsbccredit", label: "HSBC Credit Card" },
-    { id: "hlb", label: "HLB Credit Card & HL Bank" },
-    { id: "uobcredit", label: "UOB Credit Card" },
-    { id: "gxbank", label: "GX Bank" },
+    { id: "tng", label: "TNG E-wallet", csv: true },
+    { id: "ryt", label: "RYT Bank", csv: false },
+    { id: "hsbccredit", label: "HSBC Credit Card", csv: false },
+    { id: "hlb", label: "HLB Credit Card & HL Bank", csv: false },
+    { id: "uobcredit", label: "UOB Credit Card", csv: false },
+    { id: "gxbank", label: "GX Bank", csv: false },
   ];
   let fileInput = $state(null);
 
-  function handleFileSelect(e) {
-    const f = e.target?.files?.[0];
-    if (f) file = f;
+	const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50 MB
+
+  function selectedProvider() {
+    return providers.find((p) => p.id === provider);
   }
 
+	function validFile(f) {
+		if (!f) return false;
+		if (f.size > MAX_FILE_SIZE) {
+			errorMsg = "File too large. Maximum size is 50 MB.";
+			return false;
+		}
+		const pdf = isPDF(f);
+		const csv = f.name?.toLowerCase().endsWith(".csv") || f.type === "text/csv";
+		return pdf || (csv && selectedProvider()?.csv);
+	}
+
+  function handleFileSelect(e) {
+    const f = e.target?.files?.[0];
+    if (validFile(f)) file = f;
+    else if (f) errorMsg = "CSV input is only supported for TNG E-wallet.";
+  }
+
+  function handleProviderChange() {
+    if (file && !validFile(file)) file = null;
+  }
   function handleDragOver(e) {
     e.preventDefault();
     dragOver = true;
@@ -36,12 +57,16 @@
     dragOver = false;
   }
 
-  function handleDrop(e) {
-    e.preventDefault();
-    dragOver = false;
-    const f = e.dataTransfer?.files?.[0];
-    if (f) file = f;
-  }
+	function handleDrop(e) {
+		e.preventDefault();
+		dragOver = false;
+		const f = e.dataTransfer?.files?.[0];
+		if (validFile(f)) {
+			file = f;
+		} else if (f) {
+			errorMsg = "CSV input is only supported for TNG E-wallet.";
+		}
+	}
 
   function isPDF(f) {
     return (
@@ -50,41 +75,27 @@
   }
 
   async function handleSubmit() {
-    if (!provider || !file) return;
+    if (disabled || !provider || !file) return;
 
     status = "uploading";
     errorMsg = "";
 
     try {
-      const response = await convertFile(provider, file, password);
-
-      if (!response.ok) {
-        const errText = await response.text().catch(() => "Conversion failed");
-        throw new Error(errText);
-      }
-
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      const disposition = response.headers.get("Content-Disposition") || "";
-      const match = disposition.match(/filename="([^"]+)"/);
-      const filename = match?.[1] ?? `${provider}_actual_budget.csv`;
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = filename;
-      a.click();
-      URL.revokeObjectURL(url);
+      const { csv } = await convertFile(provider, file, password);
+      if (!csv) throw new Error("No CSV output");
 
       const newHistory = addConversion({
-        id: crypto.randomUUID(),
+        id: crypto.randomUUID?.() ?? (Date.now().toString(36) + Math.random().toString(36).slice(2)),
         provider,
         filename: file.name,
         timestamp: new Date().toISOString(),
         success: true,
+        csv,
       });
 
-      status = "success";
-      if (onConversionComplete) onConversionComplete(newHistory);
+      if (onConversionComplete) onConversionComplete({ history: newHistory, csv });
 
+      status = "idle";
       provider = "";
       file = null;
       password = "";
@@ -126,7 +137,8 @@
         id="provider-select"
         class="select select-bordered w-full"
         bind:value={provider}
-        disabled={status === "uploading"}
+        onchange={handleProviderChange}
+        disabled={disabled || status === "uploading"}
       >
         <option value="" disabled>Select a provider</option>
         {#each providers as p}
@@ -145,9 +157,9 @@
         type="file"
         class="hidden"
         bind:this={fileInput}
-        accept=".csv,.pdf"
+        accept={selectedProvider()?.csv ? ".csv,.pdf" : ".pdf"}
         onchange={handleFileSelect}
-        disabled={status === "uploading"}
+        disabled={disabled || status === "uploading"}
       />
 
       <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -182,7 +194,7 @@
                 file = null;
                 if (fileInput) fileInput.value = "";
               }}
-              disabled={status === "uploading"}>✕</button
+              disabled={disabled || status === "uploading"}>✕</button
             >
           </div>
         {:else}
@@ -218,14 +230,15 @@
           class="input input-bordered w-full"
           placeholder="Enter password if encrypted"
           bind:value={password}
-          disabled={status === "uploading"}
+          disabled={disabled || status === "uploading"}
         />
       </div>
     {/if}
 
     <button
       class="btn btn-primary w-full"
-      class:btn-disabled={!provider || !file || status === "uploading"}
+      class:btn-disabled={disabled || !provider || !file || status === "uploading"}
+      disabled={disabled || status === "uploading"}
       onclick={handleSubmit}
     >
       {#if status === "uploading"}

@@ -21,20 +21,3 @@ type Provider interface {
 type ConfigurableProvider interface {
 	Reload(excludeKeywords, includeKeywords []string, categories []models.CategoryRule, accountMappings map[string]string)
 }
-
-type Registry struct {
-	providers map[string]Provider
-}
-
-func NewRegistry() *Registry {
-	return &Registry{providers: make(map[string]Provider)}
-}
-
-func (registry *Registry) Register(provider Provider) {
-	registry.providers[provider.Name()] = provider
-}
-
-func (registry *Registry) Get(name string) (Provider, bool) {
-	provider, ok := registry.providers[name]
-	return provider, ok
-}

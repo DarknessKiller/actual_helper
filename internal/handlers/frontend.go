@@ -26,7 +26,7 @@ func RegisterFrontendRoutes(mux *http.ServeMux, distFS fs.FS) {
 		json.NewEncoder(w).Encode(map[string]string{"version": config.Version})
 	})
 
-	mux.Handle("/", spaHandler(distFS, devDir))
+	mux.Handle("/", securityHeaders(spaHandler(distFS, devDir)))
 }
 
 func spaHandler(distFS fs.FS, devDir string) http.Handler {
@@ -38,6 +38,13 @@ func spaHandler(distFS fs.FS, devDir string) http.Handler {
 			if !exists {
 				r.URL.Path = "/"
 			}
+		}
+
+		// Cache immutable assets aggressively; index.html stays fresh.
+		ext := filepath.Ext(r.URL.Path)
+		switch ext {
+		case ".wasm", ".js", ".css", ".woff2", ".png", ".svg":
+			w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
 		}
 
 		if distFS != nil {
@@ -55,4 +62,13 @@ func fileOnDisk(distFS fs.FS, devDir, path string) bool {
 	}
 	_, err := os.Stat(filepath.Join(devDir, path))
 	return err == nil
+}
+
+func securityHeaders(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		w.Header().Set("X-Frame-Options", "DENY")
+		w.Header().Set("Referrer-Policy", "no-referrer")
+		next.ServeHTTP(w, r)
+	})
 }

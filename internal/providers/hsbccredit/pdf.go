@@ -22,8 +22,8 @@ var summaryPrefixes = []string{
 
 var (
 	statementDateRe = regexp.MustCompile(`Statement Date\s+(\d{2} \w{3} \d{4})`)
-	postHeaderRe    = regexp.MustCompile(`(?i)Post date.*Transaction details.*Amount`)
-	transactionRe   = regexp.MustCompile(`^(\d{2} \w{3})\s+(\d{2} \w{3})\s+(.+)\s+([\d,]+\.?\d*)(CR)?\s*$`)
+	postHeaderRe    = regexp.MustCompile(`(?i)Post\s+date.*Transaction\s+details.*Amount`)
+	transactionRe   = regexp.MustCompile(`^(\d{2} \w{3})\s+(\d{2} \w{3})\s+(.+)\s+(?:RM)?([\d,]+\.?\d*)(CR)?\s*$`)
 )
 
 func parseTransactions(text string) ([]HSBCReport, error) {
@@ -43,31 +43,43 @@ func parseTransactions(text string) ([]HSBCReport, error) {
 		return nil, errors.New("invalid statement date")
 	}
 
-	dataStart := findTransactionStart(lines)
-	if dataStart == -1 {
-		return nil, errors.New("no transaction section found in text")
+	headers := findTransactionHeaders(lines)
+	if len(headers) == 0 {
+		headers = []int{0}
 	}
 
 	var reports []HSBCReport
-	for i := dataStart; i < len(lines); i++ {
-		line := strings.TrimSpace(lines[i])
-		line = strings.ReplaceAll(line, "|", "")
-		line = strings.ReplaceAll(line, "[", "")
-		line = strings.ReplaceAll(line, "]", "")
-
-		if line == "" {
-			continue
+	for idx, headerLine := range headers {
+		// Scan from line after header to next header (or end)
+		end := len(lines)
+		if idx+1 < len(headers) {
+			end = headers[idx+1]
 		}
+		seenTransaction := false
+		for i := headerLine + 1; i < end; i++ {
+			line := strings.TrimSpace(lines[i])
+			line = strings.ReplaceAll(line, "|", "")
+			line = strings.ReplaceAll(line, "[", "")
+			line = strings.ReplaceAll(line, "]", "")
 
-		if isSummaryLine(line) {
-			continue
-		}
+			if line == "" {
+				continue
+			}
 
-		report, err := parseTransactionLine(line, stmtDate)
-		if err != nil {
-			continue
+			if isSummaryLine(line) {
+				if seenTransaction {
+					break
+				}
+				continue
+			}
+
+			report, err := parseTransactionLine(line, stmtDate)
+			if err != nil {
+				continue
+			}
+			seenTransaction = true
+			reports = append(reports, report)
 		}
-		reports = append(reports, report)
 	}
 
 	return reports, nil
@@ -87,25 +99,14 @@ func extractStatementDate(lines []string) string {
 	return ""
 }
 
-func findTransactionStart(lines []string) int {
+func findTransactionHeaders(lines []string) []int {
+	var headers []int
 	for i, line := range lines {
 		if postHeaderRe.MatchString(line) {
-			for j := i + 1; j < len(lines); j++ {
-				candidate := strings.TrimSpace(lines[j])
-				candidate = strings.ReplaceAll(candidate, "|", "")
-				candidate = strings.ReplaceAll(candidate, "[", "")
-				candidate = strings.ReplaceAll(candidate, "]", "")
-				if candidate == "" {
-					continue
-				}
-				if transactionRe.MatchString(candidate) {
-					return j
-				}
-			}
-			return i + 1
+			headers = append(headers, i)
 		}
 	}
-	return -1
+	return headers
 }
 
 func isSummaryLine(line string) bool {
