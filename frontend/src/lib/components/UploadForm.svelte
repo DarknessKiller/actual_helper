@@ -13,20 +13,35 @@
   let dragOver = $state(false);
 
   const providers = [
-    { id: "tng", label: "TNG E-wallet" },
-    { id: "ryt", label: "RYT Bank" },
-    { id: "hsbccredit", label: "HSBC Credit Card" },
-    { id: "hlb", label: "HLB Credit Card & HL Bank" },
-    { id: "uobcredit", label: "UOB Credit Card" },
-    { id: "gxbank", label: "GX Bank" },
+    { id: "tng", label: "TNG E-wallet", csv: true },
+    { id: "ryt", label: "RYT Bank", csv: false },
+    { id: "hsbccredit", label: "HSBC Credit Card", csv: false },
+    { id: "hlb", label: "HLB Credit Card & HL Bank", csv: false },
+    { id: "uobcredit", label: "UOB Credit Card", csv: false },
+    { id: "gxbank", label: "GX Bank", csv: false },
   ];
   let fileInput = $state(null);
 
-  function handleFileSelect(e) {
-    const f = e.target?.files?.[0];
-    if (f) file = f;
+  function selectedProvider() {
+    return providers.find((p) => p.id === provider);
   }
 
+  function validFile(f) {
+    if (!f) return false;
+    const pdf = isPDF(f);
+    const csv = f.name?.toLowerCase().endsWith(".csv") || f.type === "text/csv";
+    return pdf || (csv && selectedProvider()?.csv);
+  }
+
+  function handleFileSelect(e) {
+    const f = e.target?.files?.[0];
+    if (validFile(f)) file = f;
+    else if (f) errorMsg = "CSV input is only supported for TNG E-wallet.";
+  }
+
+  function handleProviderChange() {
+    if (file && !validFile(file)) file = null;
+  }
   function handleDragOver(e) {
     e.preventDefault();
     dragOver = true;
@@ -112,6 +127,7 @@
         id="provider-select"
         class="select select-bordered w-full"
         bind:value={provider}
+        onchange={handleProviderChange}
         disabled={disabled || status === "uploading"}
       >
         <option value="" disabled>Select a provider</option>
@@ -131,7 +147,7 @@
         type="file"
         class="hidden"
         bind:this={fileInput}
-        accept=".csv,.pdf"
+        accept={selectedProvider()?.csv ? ".csv,.pdf" : ".pdf"}
         onchange={handleFileSelect}
         disabled={disabled || status === "uploading"}
       />

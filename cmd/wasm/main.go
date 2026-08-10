@@ -35,10 +35,36 @@ type wasmProviderConfig struct {
 	AccountMappings map[string]string     `json:"account_mappings"`
 }
 
+var currentConfig wasmConfig
+
 func main() {
+	if err := json.Unmarshal(providerConfig, &currentConfig); err != nil {
+		panic(err)
+	}
 	js.Global().Set("actualHelperConvert", js.FuncOf(convert))
 	js.Global().Set("actualHelperParsePDFText", js.FuncOf(parsePDFText))
+	js.Global().Set("actualHelperSetConfig", js.FuncOf(setConfig))
+	js.Global().Set("actualHelperResetConfig", js.FuncOf(resetConfig))
 	select {}
+}
+
+func setConfig(_ js.Value, args []js.Value) any {
+	if len(args) != 1 {
+		return errorJSON("expected provider config JSON")
+	}
+	var cfg wasmConfig
+	if err := json.Unmarshal([]byte(args[0].String()), &cfg); err != nil {
+		return errorJSON(fmt.Sprintf("invalid provider config: %v", err))
+	}
+	currentConfig = cfg
+	return `{"ok":true}`
+}
+
+func resetConfig(_ js.Value, _ []js.Value) any {
+	if err := json.Unmarshal(providerConfig, &currentConfig); err != nil {
+		return errorJSON(fmt.Sprintf("invalid bundled provider config: %v", err))
+	}
+	return `{"ok":true}`
 }
 
 func parsePDFText(_ js.Value, args []js.Value) any {
@@ -80,8 +106,7 @@ func convert(_ js.Value, args []js.Value) any {
 }
 
 func registry() map[string]providers.Provider {
-	var cfg wasmConfig
-	_ = json.Unmarshal(providerConfig, &cfg)
+	cfg := currentConfig
 	options := func(name string) wasmProviderConfig {
 		pc := cfg.Global
 		if p, ok := cfg.Providers[name]; ok {

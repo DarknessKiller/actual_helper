@@ -4,6 +4,7 @@
   import UploadForm from "$lib/components/UploadForm.svelte";
   import ResultPanel from "$lib/components/ResultPanel.svelte";
   import HistoryDashboard from "$lib/components/HistoryDashboard.svelte";
+  import ConfigPanel from "$lib/components/ConfigPanel.svelte";
   import { loadHistory } from "$lib/stores/history.js";
 
   let conversions = $state(loadHistory());
@@ -60,6 +61,7 @@
       <div role="status" class="alert mb-4">Loading browser converter…</div>
     {/if}
 
+    <ConfigPanel />
     <UploadForm onConversionComplete={handleConversionComplete} disabled={!wasmReady} />
 
     {#if lastConversion}
