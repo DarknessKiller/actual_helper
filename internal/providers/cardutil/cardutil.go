@@ -64,12 +64,20 @@ func ExtractNearCardType(text string, cardTypes []string, fallback string) strin
 }
 
 // ApplyMapping looks up account name in mapping, returns original if not found.
+// Card numbers are normalized by stripping whitespace before lookup.
 func ApplyMapping(mapping map[string]string, name string) string {
 	if mapping == nil {
 		return name
 	}
 	if mapped, ok := mapping[name]; ok {
 		return mapped
+	}
+	// Try normalized lookup for card numbers (strip all spaces)
+	normalized := strings.ReplaceAll(name, " ", "")
+	for k, v := range mapping {
+		if strings.ReplaceAll(k, " ", "") == normalized {
+			return v
+		}
 	}
 	return name
 }

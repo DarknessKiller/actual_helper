@@ -109,21 +109,39 @@ func TestApplyMapping(t *testing.T) {
 	}{
 		{
 			name:    "maps existing key",
-			mapping: map[string]string{"1234 5678 9012 3456": "My Card"},
-			input:   "1234 5678 9012 3456",
+			mapping: map[string]string{"1111 2222 3333 4444": "My Card"},
+			input:   "1111 2222 3333 4444",
 			want:    "My Card",
 		},
 		{
 			name:    "returns original when key not found",
-			mapping: map[string]string{"1234 5678 9012 3456": "My Card"},
+			mapping: map[string]string{"1111 2222 3333 4444": "My Card"},
 			input:   "9999 8888 7777 6666",
 			want:    "9999 8888 7777 6666",
 		},
 		{
 			name:    "returns original when mapping is nil",
 			mapping: nil,
-			input:   "1234 5678 9012 3456",
-			want:    "1234 5678 9012 3456",
+			input:   "1111 2222 3333 4444",
+			want:    "1111 2222 3333 4444",
+		},
+		{
+			name:    "matches normalized card number (no spaces in input)",
+			mapping: map[string]string{"1111 2222 3333 4444": "My Card"},
+			input:   "1111222233334444",
+			want:    "My Card",
+		},
+		{
+			name:    "matches normalized card number (no spaces in key)",
+			mapping: map[string]string{"1111222233334444": "My Card"},
+			input:   "1111 2222 3333 4444",
+			want:    "My Card",
+		},
+		{
+			name:    "falls back when no match after normalization",
+			mapping: map[string]string{"1111 2222 3333 4444": "My Card"},
+			input:   "9999 8888 7777 6666",
+			want:    "9999 8888 7777 6666",
 		},
 	}
 
