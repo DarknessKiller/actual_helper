@@ -29,7 +29,6 @@ func New(excludeKeywords, includeKeywords []string, categories []models.Category
 	}
 }
 
-
 func (p *RytProvider) shouldSkip(description string) bool {
 	return p.engine.ShouldSkip(description)
 }
@@ -123,4 +122,3 @@ func (p *RytProvider) toActualReports(ctx context.Context, logger *slog.Logger, 
 
 	return result
 }
-

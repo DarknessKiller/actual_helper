@@ -21,7 +21,15 @@ var (
 		"TOTAL BALANCE",
 		"PAYMENT RECEIVED - THANK YOU",
 	}
+	creditSkipPatternsLower []string
 )
+
+func init() {
+	creditSkipPatternsLower = make([]string, len(creditSkipPatterns))
+	for i, p := range creditSkipPatterns {
+		creditSkipPatternsLower[i] = strings.ToLower(p)
+	}
+}
 
 func parseCreditTransactions(text string) ([]HLBReport, error) {
 	lines := strings.Split(text, "\n")
@@ -54,8 +62,8 @@ func parseCreditTransactions(text string) ([]HLBReport, error) {
 		}
 		lower := strings.ToLower(trimmed)
 		skip := false
-		for _, pattern := range creditSkipPatterns {
-			if strings.Contains(lower, strings.ToLower(pattern)) {
+		for _, pattern := range creditSkipPatternsLower {
+			if strings.Contains(lower, pattern) {
 				skip = true
 				break
 			}

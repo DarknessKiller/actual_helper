@@ -50,10 +50,15 @@ func csvHeader() ([]string, error) {
 }
 
 func csvRow(report models.ActualBudgetReport) []string {
-	reportValue := reflect.ValueOf(report)
-	columns := make([]string, reportValue.NumField())
-	for i := range reportValue.NumField() {
-		columns[i] = reportValue.Field(i).String()
+	return []string{
+		report.Account,
+		report.Date,
+		report.Payee,
+		report.Notes,
+		report.CategoryGroup,
+		report.Category,
+		report.Amount,
+		report.SplitAmount,
+		report.Cleared,
 	}
-	return columns
 }

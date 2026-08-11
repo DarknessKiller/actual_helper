@@ -28,7 +28,6 @@ func New(excludeKeywords, includeKeywords []string, categories []models.Category
 	}
 }
 
-
 func (p *HSBCProvider) shouldSkip(description string) bool {
 	return p.engine.ShouldSkip(description)
 }
@@ -106,4 +105,3 @@ func (p *HSBCProvider) toActualReports(ctx context.Context, logger *slog.Logger,
 
 	return result
 }
-

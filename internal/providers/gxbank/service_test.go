@@ -31,7 +31,6 @@ var _ = Describe("GXBankProvider", func() {
 		})
 	})
 
-
 	Describe("ParseCSV", func() {
 		It("returns error because gxbank only supports PDF", func() {
 			provider := gxbankprov.New(nil, nil, nil, nil)

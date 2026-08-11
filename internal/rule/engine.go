@@ -7,21 +7,30 @@ import (
 	"actual_helper/internal/models"
 )
 
+type compiledCategoryRule struct {
+	lowerKeyword string
+	Group        string
+	Category     string
+}
+
 type Engine struct {
 	excludeKeywords []string
 	includeKeywords []string
-	categories      []models.CategoryRule
+	categories      []compiledCategoryRule
 	mu              sync.RWMutex
 }
 
 func NewEngine(excludeKeywords, includeKeywords []string, categories []models.CategoryRule) *Engine {
+	compiled := make([]compiledCategoryRule, len(categories))
+	for i, c := range categories {
+		compiled[i] = compiledCategoryRule{lowerKeyword: strings.ToLower(c.Keyword), Group: c.Group, Category: c.Category}
+	}
 	return &Engine{
 		excludeKeywords: lowerSlice(excludeKeywords),
 		includeKeywords: lowerSlice(includeKeywords),
-		categories:      copyCategories(categories),
+		categories:      compiled,
 	}
 }
-
 
 func (e *Engine) ShouldSkip(description string) bool {
 	e.mu.RLock()
@@ -52,7 +61,7 @@ func (e *Engine) MatchCategory(description string) (string, string) {
 
 	lower := strings.ToLower(description)
 	for _, r := range e.categories {
-		if strings.Contains(lower, strings.ToLower(r.Keyword)) {
+		if strings.Contains(lower, r.lowerKeyword) {
 			return r.Group, r.Category
 		}
 	}

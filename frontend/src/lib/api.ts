@@ -27,12 +27,15 @@ export async function convertFile(provider: string, file: File, password = ''): 
     const page = await pdfDocument.getPage(pageNumber)
     const content = await page.getTextContent()
     const items = content.items as any[]
+    items.sort((a, b) => (b.transform?.[5] ?? 0) - (a.transform?.[5] ?? 0))
     const lines: any[][] = []
+    let currentLine: any[] | null = null
     for (const item of items) {
       const y = item.transform?.[5] ?? 0
-      let line = lines.find((candidate) => Math.abs((candidate[0].transform?.[5] ?? 0) - y) < 3)
-      if (!line) lines.push(line = [])
-      line.push(item)
+      if (!currentLine || Math.abs((currentLine[0].transform?.[5] ?? 0) - y) >= 3) {
+        lines.push(currentLine = [])
+      }
+      currentLine.push(item)
     }
     text += lines
       .sort((a, b) => (b[0].transform?.[5] ?? 0) - (a[0].transform?.[5] ?? 0))

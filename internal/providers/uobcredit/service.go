@@ -28,7 +28,6 @@ func New(excludeKeywords, includeKeywords []string, categories []models.Category
 	}
 }
 
-
 func (p *UOBProvider) shouldSkip(description string) bool {
 	return p.engine.ShouldSkip(description)
 }
@@ -105,4 +104,3 @@ func (p *UOBProvider) toActualReports(ctx context.Context, logger *slog.Logger, 
 
 	return result
 }
-
