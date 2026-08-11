@@ -53,23 +53,29 @@ func parseBlocks(text string) ([]RytReport, error) {
 	body := text[idx:]
 
 	// Remove page headers (everything between "Savings Account Statement" and next "Baki")
+	var cleaned strings.Builder
+	cleaned.Grow(len(body))
+	pos := 0
 	for {
-		stmtIdx := strings.Index(body, "Savings Account Statement")
+		stmtIdx := strings.Index(body[pos:], "Savings Account Statement")
 		if stmtIdx == -1 {
+			cleaned.WriteString(body[pos:])
 			break
 		}
-
+		stmtIdx += pos
 		bakiIdx := strings.Index(body[stmtIdx:], "Baki")
 		if bakiIdx == -1 {
+			cleaned.WriteString(body[pos:])
 			break
 		}
-
 		endIdx := stmtIdx + bakiIdx + len("Baki")
 		for endIdx < len(body) && (body[endIdx] == '\n' || body[endIdx] == '\r') {
 			endIdx++
 		}
-		body = body[:stmtIdx] + body[endIdx:]
+		cleaned.WriteString(body[pos:stmtIdx])
+		pos = endIdx
 	}
+	body = cleaned.String()
 
 	bakiIdx := strings.Index(body, "Baki")
 	if bakiIdx == -1 {

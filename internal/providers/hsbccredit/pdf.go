@@ -20,6 +20,15 @@ var summaryPrefixes = []string{
 	"Your statement balance",
 }
 
+var summaryPrefixesLower []string
+
+func init() {
+	summaryPrefixesLower = make([]string, len(summaryPrefixes))
+	for i, p := range summaryPrefixes {
+		summaryPrefixesLower[i] = strings.ToLower(p)
+	}
+}
+
 var (
 	statementDateRe = regexp.MustCompile(`Statement Date\s+(\d{2} \w{3} \d{4})`)
 	postHeaderRe    = regexp.MustCompile(`(?i)Post\s+date.*Transaction\s+details.*Amount`)
@@ -58,9 +67,12 @@ func parseTransactions(text string) ([]HSBCReport, error) {
 		seenTransaction := false
 		for i := headerLine + 1; i < end; i++ {
 			line := strings.TrimSpace(lines[i])
-			line = strings.ReplaceAll(line, "|", "")
-			line = strings.ReplaceAll(line, "[", "")
-			line = strings.ReplaceAll(line, "]", "")
+			line = strings.Map(func(r rune) rune {
+				if r == '|' || r == '[' || r == ']' {
+					return -1
+				}
+				return r
+			}, line)
 
 			if line == "" {
 				continue
@@ -111,8 +123,8 @@ func findTransactionHeaders(lines []string) []int {
 
 func isSummaryLine(line string) bool {
 	lower := strings.ToLower(line)
-	for _, prefix := range summaryPrefixes {
-		if strings.HasPrefix(lower, strings.ToLower(prefix)) {
+	for _, prefix := range summaryPrefixesLower {
+		if strings.HasPrefix(lower, prefix) {
 			return true
 		}
 	}

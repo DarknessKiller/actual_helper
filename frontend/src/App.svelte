@@ -62,7 +62,7 @@
       <div role="status" class="alert mb-4">Loading browser converter…</div>
     {/if}
 
-    <ConfigPanel />
+    <ConfigPanel onConfigChange={() => {}} />
     <UploadForm onConversionComplete={handleConversionComplete} disabled={!wasmReady} />
 
     {#if lastConversion}

@@ -28,7 +28,6 @@ func New(excludeKeywords, includeKeywords []string, categories []models.Category
 	}
 }
 
-
 func (p *HLBProvider) shouldSkip(description string) bool {
 	return p.engine.ShouldSkip(description)
 }
@@ -182,4 +181,3 @@ func extractAccountFromMarker(text string, idx int, fallback string) string {
 	}
 	return fallback
 }
-

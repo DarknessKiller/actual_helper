@@ -50,7 +50,6 @@ func New(excludeKeywords, includeKeywords []string, categories []models.Category
 	}
 }
 
-
 func (p *TNGProvider) shouldSkip(description string) bool {
 	return p.engine.ShouldSkip(description)
 }
@@ -185,4 +184,3 @@ func parseAmount(amountStr string) (float64, error) {
 	amountStr = strings.ReplaceAll(amountStr, ",", "")
 	return strconv.ParseFloat(amountStr, 64)
 }
-

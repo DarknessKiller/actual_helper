@@ -28,6 +28,15 @@ var skipPatterns = []string{
 	"page no",
 }
 
+var skipPatternsLower []string
+
+func init() {
+	skipPatternsLower = make([]string, len(skipPatterns))
+	for i, p := range skipPatterns {
+		skipPatternsLower[i] = strings.ToLower(p)
+	}
+}
+
 func parseTransactions(text string) ([]UOBReport, error) {
 	stmtDateStr := extractStatementDate(text)
 	if stmtDateStr == "" {
@@ -79,7 +88,7 @@ func shouldSkipLine(line string) bool {
 		return true
 	}
 	lower := strings.ToLower(trimmed)
-	for _, pattern := range skipPatterns {
+	for _, pattern := range skipPatternsLower {
 		if strings.Contains(lower, pattern) {
 			return true
 		}

@@ -2,6 +2,7 @@
   let { onConfigChange } = $props();
   let configError = $state("");
   let input = $state(null);
+  let configLoaded = $state(false);
 
   const sampleConfig = {
     global: {
@@ -43,12 +44,19 @@
     try {
       const result = JSON.parse(actualHelperSetConfig(await file.text()));
       if (result.error) throw new Error(result.error);
+      configLoaded = true;
       onConfigChange?.();
     } catch (error) {
       configError = error.message || "Invalid provider config";
     } finally {
       if (input) input.value = "";
     }
+  }
+
+  function unloadConfig() {
+    actualHelperResetConfig();
+    configLoaded = false;
+    onConfigChange?.();
   }
 </script>
 
@@ -62,6 +70,9 @@
         <input bind:this={input} class="hidden" type="file" accept="application/json,.json" onchange={importConfig} />
       </label>
       <button class="btn btn-sm btn-ghost w-fit" onclick={downloadSample}>Download Sample</button>
+      {#if configLoaded}
+        <button class="btn btn-sm btn-ghost text-error w-fit" onclick={unloadConfig}>Unload</button>
+      {/if}
     </div>
     {#if configError}<p class="text-sm text-error mt-2" role="alert">{configError}</p>{/if}
   </div>
