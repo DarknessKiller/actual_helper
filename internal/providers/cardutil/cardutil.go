@@ -24,6 +24,7 @@ func ExtractAfterMarker(text, marker, fallback string) string {
 	}
 
 	after := text[idx+len(marker):]
+	after = strings.ReplaceAll(after, "\r", "")
 	after = strings.ReplaceAll(after, "\n", " ")
 	after = strings.ReplaceAll(after, "-", " ")
 
@@ -53,6 +54,8 @@ func ExtractNearCardType(text string, cardTypes []string, fallback string) strin
 			end = len(text)
 		}
 		area := text[start:end]
+		area = strings.ReplaceAll(area, "\r", "")
+		area = strings.ReplaceAll(area, "\n", " ")
 
 		if matches := CardNumberRe.FindString(area); matches != "" {
 			return strings.ReplaceAll(matches, "-", " ")
