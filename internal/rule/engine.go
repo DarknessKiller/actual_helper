@@ -33,39 +33,47 @@ func NewEngine(excludeKeywords, includeKeywords []string, categories []models.Ca
 }
 
 func (e *Engine) ShouldSkip(description string) bool {
+	skip, _, _ := e.Evaluate(description)
+	return skip
+}
+
+func (e *Engine) MatchCategory(description string) (string, string) {
+	_, group, category := e.Evaluate(description)
+	return group, category
+}
+
+// Evaluate performs skip check and category match in a single lock acquisition.
+func (e *Engine) Evaluate(description string) (skip bool, group, category string) {
 	e.mu.RLock()
 	defer e.mu.RUnlock()
 
 	lower := strings.ToLower(description)
 
 	if len(e.includeKeywords) > 0 {
+		found := false
 		for _, kw := range e.includeKeywords {
 			if strings.Contains(lower, kw) {
-				return false
+				found = true
+				break
 			}
 		}
-		return true
-	}
-
-	for _, kw := range e.excludeKeywords {
-		if strings.Contains(lower, kw) {
-			return true
+		if !found {
+			return true, "", ""
+		}
+	} else {
+		for _, kw := range e.excludeKeywords {
+			if strings.Contains(lower, kw) {
+				return true, "", ""
+			}
 		}
 	}
-	return false
-}
 
-func (e *Engine) MatchCategory(description string) (string, string) {
-	e.mu.RLock()
-	defer e.mu.RUnlock()
-
-	lower := strings.ToLower(description)
 	for _, r := range e.categories {
 		if strings.Contains(lower, r.lowerKeyword) {
-			return r.Group, r.Category
+			return false, r.Group, r.Category
 		}
 	}
-	return "", ""
+	return false, "", ""
 }
 
 func lowerSlice(s []string) []string {
@@ -76,14 +84,5 @@ func lowerSlice(s []string) []string {
 	for i, v := range s {
 		out[i] = strings.ToLower(v)
 	}
-	return out
-}
-
-func copyCategories(c []models.CategoryRule) []models.CategoryRule {
-	if c == nil {
-		return nil
-	}
-	out := make([]models.CategoryRule, len(c))
-	copy(out, c)
 	return out
 }
