@@ -1,5 +1,48 @@
 type ConversionResult = { csv: string }
 
+// Render a row of pdf text items/words as pdftotext -layout would: place each
+// token at its horizontal column so multi-space column gaps are preserved. The
+// Go parsers' regexes rely on `\s{2,}` column separators, which a naive
+// single-space join destroys. `xOf` reads the token's left edge and `wOf` its
+// width (pdf.js transform vs OCR bbox).
+function renderLayout(
+  tokens: any[],
+  xOf: (t: any) => number,
+  wOf: (t: any) => number,
+): string {
+  tokens.sort((a, b) => xOf(a) - xOf(b))
+  let charW = 0
+  let n = 0
+  for (const t of tokens) {
+    const s = (t.str ?? t.text ?? '').trim()
+    const w = wOf(t)
+    if (s && w > 0) {
+      charW += w / (s.length || 1)
+      n++
+    }
+  }
+  charW = n ? charW / n : 0
+  if (charW <= 0) return tokens.map((t) => (t.str ?? t.text ?? '').trim()).filter(Boolean).join(' ')
+
+  let out = ''
+  let first = true
+  let prevRight = 0
+  for (const t of tokens) {
+    const s = (t.str ?? t.text ?? '').trim()
+    if (!s) continue
+    const x = xOf(t)
+    if (first) {
+      out += ' '.repeat(Math.max(0, Math.round(x / charW)))
+      first = false
+    } else {
+      out += ' '.repeat(Math.max(1, Math.round((x - prevRight) / charW)))
+    }
+    out += s
+    prevRight = x + (wOf(t) || s.length * charW)
+  }
+  return out
+}
+
 function wasmResult(result: unknown): string {
   if (typeof result !== 'string') return (result as any)?.csv ?? ''
   if (result.startsWith('{"error')) {
@@ -38,7 +81,13 @@ export async function convertFile(provider: string, file: File, password = ''): 
     pageTexts.push(
       lines
         .sort((a, b) => (b[0].transform?.[5] ?? 0) - (a[0].transform?.[5] ?? 0))
-        .map((line) => line.sort((a, b) => (a.transform?.[4] ?? 0) - (b.transform?.[4] ?? 0)).map((item) => item.str).join(' '))
+        .map((line) =>
+          renderLayout(
+            line,
+            (it) => it.transform?.[4] ?? 0,
+            (it) => it.width ?? 0,
+          ),
+        )
         .join('\n')
     )
   }
@@ -59,7 +108,22 @@ export async function convertFile(provider: string, file: File, password = ''): 
         canvas.width = viewport.width
         canvas.height = viewport.height
         await page.render({ canvas, canvasContext: canvas.getContext('2d')!, viewport }).promise
-        ocrTexts.push((await worker.recognize(canvas)).data.text)
+        const { data } = await worker.recognize(canvas)
+        // Rebuild layout (multi-space columns) from Tesseract's word boxes,
+        // the same way the digital path rebuilds pdf.js layout.
+        ocrTexts.push(
+          (data.blocks ?? [])
+            .flatMap((b) => b.paragraphs ?? [])
+            .flatMap((p) => p.lines ?? [])
+            .map((line) =>
+              renderLayout(
+                line.words ?? [],
+                (w) => w.bbox?.x0 ?? 0,
+                (w) => (w.bbox?.x1 ?? 0) - (w.bbox?.x0 ?? 0),
+              ),
+            )
+            .join('\n')
+        )
       }
     } finally {
       await worker.terminate()
