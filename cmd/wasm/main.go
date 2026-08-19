@@ -32,6 +32,8 @@ type wasmProviderConfig struct {
 }
 
 var currentConfig wasmConfig
+var cachedRegistry map[string]providers.Provider
+var configVersion int
 
 func main() {
 	js.Global().Set("actualHelperConvert", js.FuncOf(convert))
@@ -50,53 +52,22 @@ func setConfig(_ js.Value, args []js.Value) any {
 		return errorJSON(fmt.Sprintf("invalid provider config: %v", err))
 	}
 	currentConfig = cfg
+	configVersion++
+	cachedRegistry = nil
 	return `{"ok":true}`
 }
 
 func resetConfig(_ js.Value, _ []js.Value) any {
 	currentConfig = wasmConfig{}
+	configVersion++
+	cachedRegistry = nil
 	return `{"ok":true}`
 }
 
-func parsePDFText(_ js.Value, args []js.Value) any {
-	if len(args) != 2 {
-		return errorJSON("expected provider and extracted PDF text")
+func getRegistry() map[string]providers.Provider {
+	if cachedRegistry != nil {
+		return cachedRegistry
 	}
-	provider, ok := registry()[args[0].String()]
-	if !ok {
-		return errorJSON(fmt.Sprintf("provider %q not found", args[0].String()))
-	}
-	reports, err := provider.ParsePDFText(context.Background(), args[1].String())
-	if err != nil {
-		return errorJSON(err.Error())
-	}
-	data, err := services.ToActualCSV(reports)
-	if err != nil {
-		return errorJSON(err.Error())
-	}
-	return string(data)
-}
-
-func convert(_ js.Value, args []js.Value) any {
-	if len(args) != 2 {
-		return errorJSON("expected provider and CSV text")
-	}
-	provider, ok := registry()[args[0].String()]
-	if !ok {
-		return errorJSON(fmt.Sprintf("provider %q not found", args[0].String()))
-	}
-	reports, err := provider.ParseCSV(context.Background(), stringReader(args[1].String()))
-	if err != nil {
-		return errorJSON(err.Error())
-	}
-	data, err := services.ToActualCSV(reports)
-	if err != nil {
-		return errorJSON(err.Error())
-	}
-	return string(data)
-}
-
-func registry() map[string]providers.Provider {
 	cfg := currentConfig
 	options := func(name string) wasmProviderConfig {
 		pc := cfg.Global
@@ -116,7 +87,46 @@ func registry() map[string]providers.Provider {
 		pc := options(name)
 		result[name] = factory(pc.ExcludeKeywords, pc.IncludeKeywords, pc.Categories, pc.AccountMappings)
 	}
+	cachedRegistry = result
 	return result
+}
+
+func parsePDFText(_ js.Value, args []js.Value) any {
+	if len(args) != 2 {
+		return errorJSON("expected provider and extracted PDF text")
+	}
+	provider, ok := getRegistry()[args[0].String()]
+	if !ok {
+		return errorJSON(fmt.Sprintf("provider %q not found", args[0].String()))
+	}
+	reports, err := provider.ParsePDFText(context.Background(), args[1].String())
+	if err != nil {
+		return errorJSON(err.Error())
+	}
+	data, err := services.ToActualCSV(reports)
+	if err != nil {
+		return errorJSON(err.Error())
+	}
+	return string(data)
+}
+
+func convert(_ js.Value, args []js.Value) any {
+	if len(args) != 2 {
+		return errorJSON("expected provider and CSV text")
+	}
+	provider, ok := getRegistry()[args[0].String()]
+	if !ok {
+		return errorJSON(fmt.Sprintf("provider %q not found", args[0].String()))
+	}
+	reports, err := provider.ParseCSV(context.Background(), stringReader(args[1].String()))
+	if err != nil {
+		return errorJSON(err.Error())
+	}
+	data, err := services.ToActualCSV(reports)
+	if err != nil {
+		return errorJSON(err.Error())
+	}
+	return string(data)
 }
 
 func stringReader(s string) io.Reader { return &reader{s: s} }

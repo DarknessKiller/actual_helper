@@ -18,7 +18,7 @@ export function loadHistory(): Conversion[] {
   }
 }
 
-export function saveHistory(conversions: Conversion[]): void {
+function saveHistory(conversions: Conversion[]): void {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(conversions.map(({ csv, ...conversion }) => conversion)))
   } catch {
@@ -39,4 +39,3 @@ export function clearHistory(): void {
   }
 }
 
-export type { Conversion }

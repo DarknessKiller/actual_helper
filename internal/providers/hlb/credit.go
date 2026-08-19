@@ -81,14 +81,9 @@ func parseCreditTransactions(text string) ([]HLBReport, error) {
 		if err != nil {
 			continue
 		}
-		postDate, err := dateutil.FormatDate(matches[2], stmtDate)
-		if err != nil {
-			continue
-		}
 
 		reports = append(reports, HLBReport{
 			TransDate:   transDate,
-			PostDate:    postDate,
 			Description: strings.TrimSpace(matches[3]),
 			Amount:      matches[4],
 			IsCredit:    matches[5] == "CR",

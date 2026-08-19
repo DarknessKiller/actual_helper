@@ -9,20 +9,31 @@ import (
 	"actual_helper/internal/models"
 )
 
+var cachedHeader []string
+
+func init() {
+	reportType := reflect.TypeFor[models.ActualBudgetReport]()
+	cachedHeader = make([]string, reportType.NumField())
+	for i := range reportType.NumField() {
+		tag := reportType.Field(i).Tag.Get("csv")
+		if tag == "" {
+			panic(fmt.Sprintf("field %q missing csv tag", reportType.Field(i).Name))
+		}
+		cachedHeader[i] = tag
+	}
+}
+
 func ToActualCSV(reports []models.ActualBudgetReport) ([]byte, error) {
 	var buffer bytes.Buffer
 	writer := csv.NewWriter(&buffer)
 
-	header, err := csvHeader()
-	if err != nil {
-		return nil, err
-	}
-	if err := writer.Write(header); err != nil {
+	if err := writer.Write(cachedHeader); err != nil {
 		return nil, fmt.Errorf("write header: %w", err)
 	}
 
+	row := make([]string, len(cachedHeader))
 	for _, report := range reports {
-		row := csvRow(report)
+		csvRow(report, row)
 		if err := writer.Write(row); err != nil {
 			return nil, fmt.Errorf("write row: %w", err)
 		}
@@ -36,29 +47,14 @@ func ToActualCSV(reports []models.ActualBudgetReport) ([]byte, error) {
 	return buffer.Bytes(), nil
 }
 
-func csvHeader() ([]string, error) {
-	reportType := reflect.TypeFor[models.ActualBudgetReport]()
-	columns := make([]string, reportType.NumField())
-	for i := range reportType.NumField() {
-		tag := reportType.Field(i).Tag.Get("csv")
-		if tag == "" {
-			return nil, fmt.Errorf("field %q missing csv tag", reportType.Field(i).Name)
-		}
-		columns[i] = tag
-	}
-	return columns, nil
-}
-
-func csvRow(report models.ActualBudgetReport) []string {
-	return []string{
-		report.Account,
-		report.Date,
-		report.Payee,
-		report.Notes,
-		report.CategoryGroup,
-		report.Category,
-		report.Amount,
-		report.SplitAmount,
-		report.Cleared,
-	}
+func csvRow(report models.ActualBudgetReport, row []string) {
+	row[0] = report.Account
+	row[1] = report.Date
+	row[2] = report.Payee
+	row[3] = report.Notes
+	row[4] = report.CategoryGroup
+	row[5] = report.Category
+	row[6] = report.Amount
+	row[7] = report.SplitAmount
+	row[8] = report.Cleared
 }

@@ -138,8 +138,7 @@ func parseTransactionLine(line string, stmtDate time.Time) (HSBCReport, error) {
 	}
 
 	// HSBC format: "Post date | Transaction date | Transaction details | Amount"
-	// matches[1] = Post date, matches[2] = Transaction date
-	postDateStr := matches[1]
+	// matches[2] = Transaction date
 	transDateStr := matches[2]
 	description := strings.TrimSpace(matches[3])
 	amountStr := matches[4]
@@ -149,14 +148,9 @@ func parseTransactionLine(line string, stmtDate time.Time) (HSBCReport, error) {
 	if err != nil {
 		return HSBCReport{}, err
 	}
-	postDate, err := dateutil.FormatDate(postDateStr, stmtDate)
-	if err != nil {
-		return HSBCReport{}, err
-	}
 
 	return HSBCReport{
 		TransDate:   transDate,
-		PostDate:    postDate,
 		Description: description,
 		Amount:      amountStr,
 		IsCredit:    isCredit,

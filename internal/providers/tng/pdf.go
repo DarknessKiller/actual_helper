@@ -69,8 +69,6 @@ func parseBlock(block string) (TNGReport, error) {
 	}
 
 	transType := strings.TrimSpace(lines[2])
-	ref := strings.TrimSpace(lines[3])
-
 	desc := ""
 	if len(lines) > 4 {
 		desc = trimAtReference(strings.TrimSpace(lines[4]))
@@ -91,7 +89,6 @@ func parseBlock(block string) (TNGReport, error) {
 		Date:            date,
 		Status:          status,
 		TransactionType: transType,
-		Reference:       ref,
 		Description:     desc,
 		Amount:          amount,
 	}, nil

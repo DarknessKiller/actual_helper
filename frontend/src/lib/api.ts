@@ -1,15 +1,16 @@
-export type ConversionResult = { csv: string }
+type ConversionResult = { csv: string }
 
 function wasmResult(result: unknown): string {
   if (typeof result !== 'string') return (result as any)?.csv ?? ''
-  let parsed: any
-  try {
-    parsed = JSON.parse(result)
-  } catch {
-    return result
+  if (result.startsWith('{"error')) {
+    try {
+      const parsed = JSON.parse(result)
+      if (parsed?.error) throw new Error(parsed.error)
+    } catch (e) {
+      if (e instanceof Error && e.message !== result) throw e
+    }
   }
-  if (parsed?.error) throw new Error(parsed.error)
-  return parsed?.csv ?? result
+  return result
 }
 
 export async function convertFile(provider: string, file: File, password = ''): Promise<ConversionResult> {
@@ -22,7 +23,7 @@ export async function convertFile(provider: string, file: File, password = ''): 
   const pdfjs = await import('pdfjs-dist')
   pdfjs.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).toString()
   const pdfDocument = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()), password }).promise
-  let text = ''
+  const pageTexts: string[] = []
   for (let pageNumber = 1; pageNumber <= pdfDocument.numPages; pageNumber++) {
     const page = await pdfDocument.getPage(pageNumber)
     const content = await page.getTextContent()
@@ -37,11 +38,14 @@ export async function convertFile(provider: string, file: File, password = ''): 
       }
       currentLine.push(item)
     }
-    text += lines
-      .sort((a, b) => (b[0].transform?.[5] ?? 0) - (a[0].transform?.[5] ?? 0))
-      .map((line) => line.sort((a, b) => (a.transform?.[4] ?? 0) - (b.transform?.[4] ?? 0)).map((item) => item.str).join(' '))
-      .join('\n') + '\n'
+    pageTexts.push(
+      lines
+        .sort((a, b) => (b[0].transform?.[5] ?? 0) - (a[0].transform?.[5] ?? 0))
+        .map((line) => line.sort((a, b) => (a.transform?.[4] ?? 0) - (b.transform?.[4] ?? 0)).map((item) => item.str).join(' '))
+        .join('\n')
+    )
   }
+  const text = pageTexts.join('\n') + '\n'
   const parsePDF = (globalThis as any).actualHelperParsePDFText
   if (!parsePDF) throw new Error('Browser PDF parser is not loaded')
   try {
@@ -49,7 +53,7 @@ export async function convertFile(provider: string, file: File, password = ''): 
   } catch (digitalError) {
     const { createWorker } = await import('tesseract.js')
     const worker = await createWorker('eng+msa')
-    let ocrText = ''
+    const ocrTexts: string[] = []
     try {
       for (let pageNumber = 1; pageNumber <= pdfDocument.numPages; pageNumber++) {
         const page = await pdfDocument.getPage(pageNumber)
@@ -58,11 +62,12 @@ export async function convertFile(provider: string, file: File, password = ''): 
         canvas.width = viewport.width
         canvas.height = viewport.height
         await page.render({ canvas, canvasContext: canvas.getContext('2d')!, viewport }).promise
-        ocrText += (await worker.recognize(canvas)).data.text + '\n'
+        ocrTexts.push((await worker.recognize(canvas)).data.text)
       }
     } finally {
       await worker.terminate()
     }
+    const ocrText = ocrTexts.join('\n') + '\n'
     if (!ocrText.trim()) throw digitalError
     return { csv: wasmResult(parsePDF(provider, ocrText)) }
   }

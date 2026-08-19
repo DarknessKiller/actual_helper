@@ -196,32 +196,3 @@ func parseBlock(block string) (RytReport, error) {
 		Amount:      amount,
 	}, nil
 }
-
-func findBalanceHeader(body string) int {
-	// Try several patterns in order of specificity
-	patterns := []string{
-		"Balance\nBaki",  // separate lines (English then Malay)
-		"Balance / Baki", // on same line with slash
-		"\nBaki\n",       // standalone "Baki" on its own line
-	}
-	for _, p := range patterns {
-		if idx := strings.Index(body, p); idx != -1 {
-			// For "\nBaki\n", the actual Baki starts at idx+1
-			if p == "\nBaki\n" {
-				return idx + 1
-			}
-			// For "Balance\nBaki" or "Balance / Baki", find the "Baki" part
-			bakiIdx := strings.LastIndex(body[:idx+len(p)], "Baki")
-			return bakiIdx
-		}
-	}
-	// Last resort: find any "Baki" in the first 300 chars (header area)
-	headerArea := body
-	if len(headerArea) > 300 {
-		headerArea = headerArea[:300]
-	}
-	if idx := strings.Index(headerArea, "Baki"); idx != -1 {
-		return idx
-	}
-	return -1
-}
