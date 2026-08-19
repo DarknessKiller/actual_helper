@@ -108,9 +108,10 @@ export async function convertFile(provider: string, file: File, password = ''): 
         canvas.width = viewport.width
         canvas.height = viewport.height
         await page.render({ canvas, canvasContext: canvas.getContext('2d')!, viewport }).promise
-        const { data } = await worker.recognize(canvas)
-        // Rebuild layout (multi-space columns) from Tesseract's word boxes,
-        // the same way the digital path rebuilds pdf.js layout.
+        const { data } = await worker.recognize(canvas, {}, { blocks: true })
+        // Rebuild layout (multi-space columns) from Tesseract word boxes, the
+        // same way the digital path rebuilds pdf.js layout. The `blocks` output
+        // is required or data.blocks is null and reconstruction yields nothing.
         ocrTexts.push(
           (data.blocks ?? [])
             .flatMap((b) => b.paragraphs ?? [])
