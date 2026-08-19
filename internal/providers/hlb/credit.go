@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	statementDateRe = regexp.MustCompile(`(?:Tarikh Penyata|Statement Date)\s+(\d{2} \w{3} \d{4})`)
+	statementDateRe = regexp.MustCompile(`(?i)(?:tarikh penyata|statement date)\s*:?\s+(\d{2} \w{3} \d{4})`)
 
 	transactionLineRe  = regexp.MustCompile(`^\s*(\d{2} \w{3})\s+(\d{2} \w{3})\s+(.+?)\s{2,}([\d,.]+)\s*(CR)?$`)
 	creditSkipPatterns = []string{
@@ -34,12 +34,12 @@ func init() {
 func parseCreditTransactions(text string) ([]HLBReport, error) {
 	lines := strings.Split(text, "\n")
 
+	// Search the whole text (not per-line): marker and date can sit on separate
+	// lines or with a colon, and case varies in OCR/extracted text. In Go RE2
+	// `\s+` also matches the newline between them.
 	var stmtDateStr string
-	for _, line := range lines {
-		if matches := statementDateRe.FindStringSubmatch(line); matches != nil {
-			stmtDateStr = matches[1]
-			break
-		}
+	if matches := statementDateRe.FindStringSubmatch(text); matches != nil {
+		stmtDateStr = matches[1]
 	}
 	if stmtDateStr == "" {
 		slog.Warn("statement date not found in HLB text",

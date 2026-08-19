@@ -40,6 +40,29 @@ var _ = Describe("ParsePDFText", func() {
 		Expect(reports[0].Notes).To(Equal("ONLINE STORE"))
 	})
 
+	It("parses when statement date marker is uppercase with colon and date on next line", func() {
+		text := `TARIKH PENYATA:
+14 JUL 2026
+  15 JUN          16 JUN      STORE-ABC          KOTA LAMA                                                                     25.00`
+
+		reports, err := provider.ParsePDFText(ctx, text)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(reports).To(HaveLen(1))
+		Expect(reports[0].Amount).To(Equal("-25.00"))
+		Expect(reports[0].Date).To(Equal("2026-06-15"))
+	})
+
+	It("parses when statement date uses the English Statement Date marker", func() {
+		text := `Statement Date                    14 JUL 2026
+  15 JUN          16 JUN      STORE-ABC          KOTA LAMA                                                                     25.00`
+
+		reports, err := provider.ParsePDFText(ctx, text)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(reports).To(HaveLen(1))
+		Expect(reports[0].Amount).To(Equal("-25.00"))
+		Expect(reports[0].Date).To(Equal("2026-06-15"))
+	})
+
 	It("parses multiple transactions", func() {
 		text := `Tarikh Penyata                    14 JUL 2026
   15 JUN          16 JUN      STORE-ABC          KOTA LAMA                                                                     25.00

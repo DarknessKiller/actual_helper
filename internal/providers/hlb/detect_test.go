@@ -26,4 +26,19 @@ Statement Period /
 		text := `Random text without markers`
 		Expect(hlbprov.DetectFormat(text)).To(Equal("unknown"))
 	})
+
+	It("detects credit when marker is uppercase with a colon (OCR output)", func() {
+		text := `TARIKH PENYATA: 14 JUL 2026`
+		Expect(hlbprov.DetectFormat(text)).To(Equal("credit"))
+	})
+
+	It("detects credit when marker has variable spacing", func() {
+		text := `Tarikh   Penyata    14 JUL 2026`
+		Expect(hlbprov.DetectFormat(text)).To(Equal("credit"))
+	})
+
+	It("detects credit via the English Statement Date marker", func() {
+		text := `Statement Date  14 JUL 2026`
+		Expect(hlbprov.DetectFormat(text)).To(Equal("credit"))
+	})
 })
