@@ -239,7 +239,7 @@ Each package has its own test suite covering success paths, failure paths, and e
 |---|---|
 | **Language** | Go 1.26 |
 | **Web framework** | [Fuego](https://github.com/go-fuego/fuego) |
-| **Frontend** | Svelte 5, Vite, Tailwind CSS, DaisyUI |
+| **Frontend** | Svelte 5, Vite, Tailwind CSS (light/dark/amoled themes) |
 | **PDF extraction** | PDF.js (digital), Tesseract.js (OCR fallback) |
 | **Provider runtime** | Go compiled to WebAssembly |
 | **Testing** | Ginkgo v2, Gomega, httptest |
