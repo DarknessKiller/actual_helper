@@ -60,20 +60,18 @@
   }
 </script>
 
-<div class="card bg-base-100 shadow-sm mb-4">
-  <div class="card-body py-4">
-    <h2 class="font-semibold">Provider configuration</h2>
-    <p class="text-xs text-base-content/60">Load a JSON config to set filters, categories, and account mappings for this browser session. Never uploaded.</p>
-    <div class="flex gap-2 mt-2">
-      <label class="btn btn-sm btn-outline w-fit">
-        Load JSON
-        <input bind:this={input} class="hidden" type="file" accept="application/json,.json" onchange={importConfig} />
-      </label>
-      <button class="btn btn-sm btn-ghost w-fit" onclick={downloadSample}>Download Sample</button>
-      {#if configLoaded}
-        <button class="btn btn-sm btn-ghost text-error w-fit" onclick={unloadConfig}>Unload</button>
-      {/if}
-    </div>
-    {#if configError}<p class="text-sm text-error mt-2" role="alert">{configError}</p>{/if}
+<div class="glass rounded-2xl px-5 py-4">
+  <h2 class="text-[15px] font-semibold tracking-tight">Provider configuration</h2>
+  <p class="text-[13px] copy mt-0.5">Load a JSON config to set filters, categories, and account mappings for this session. Never uploaded.</p>
+  <div class="flex flex-wrap gap-2 mt-3">
+    <label class="btn-ghost-apple h-9 border border-[var(--ah-accent-border)]">
+      Load JSON
+      <input bind:this={input} class="hidden" type="file" accept="application/json,.json" onchange={importConfig} />
+    </label>
+    <button class="btn-ghost-apple h-9" onclick={downloadSample}>Download Sample</button>
+    {#if configLoaded}
+      <button class="btn-ghost-apple h-9" data-danger onclick={unloadConfig}>Unload</button>
+    {/if}
   </div>
+  {#if configError}<p class="text-sm text-danger mt-2" role="alert">{configError}</p>{/if}
 </div>
