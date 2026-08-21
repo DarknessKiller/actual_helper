@@ -4,9 +4,11 @@
 
 A Go web server (Fuego) that converts bank/fintech transaction files (CSV or PDF) into Actual Budget-compatible CSV format. Designed for multiple providers.
 
+Conversion is server-side: the browser uploads the raw file to `POST /convert/{provider}` and the server parses it and returns Actual Budget CSV. Raw transaction documents do reach the server — there is no client-side parsing.
+
 ### Tech Stack
 
-* Go
+* Go 1.27 (module directive `go 1.27`, toolchain `go1.27.0`)
 * Fuego
 * Ginkgo/Gomega
 
@@ -120,11 +122,19 @@ Always empty in `ActualBudgetReport`. Description value goes in `Notes`.
 
 ### Credit/Debit Detection (TNG)
 
-`isCredit()` returns true for: `Reload`, `Receive from Wallet`, `DUITNOW_RECEIVEFROM`, `Refund`. Credits are positive amounts, debits are negative.
+`isCredit()` returns true for: `Reload`, `Receive from Wallet`, `DUITNOW_RECEIVEFROM`, `Refund`, `GO+ Daily Earnings`, `GO+ Cash In`. Credits are positive amounts, debits are negative.
 
-### Provider Config
+### Config Lifecycle (not provider activation)
 
-A single JSON file (`PROVIDER_CONFIG_PATH` env var) supplies all per-provider rules.
+Providers are statically compiled into the binary and **always active** (registered in `cmd/app/main.go`). Config is **tuning only** — exclude/include keywords, category rules, account mappings — applied via `ConfigurableProvider.Reload`. The lifecycle endpoints below manage config, never provider activation. There is no provider unload, no plugin/.so/WASM.
+
+Config is **empty by default**: nothing is auto-loaded at startup and nothing is read from disk per request. The `config.Loader` holds the active config in memory; `ProviderConfig(name)` reads memory under a mutex with no file I/O.
+
+Endpoints:
+
+* `GET /config` — download the sample config file at `PROVIDER_CONFIG_PATH` (`application/json`); 404 when the path is empty or unreadable. The file is read on demand and **never auto-applied**.
+* `POST /config` — upload a user config JSON `{global, providers}`. Validated by unmarshalling into the config struct; invalid JSON or empty body → 400 (the existing config stays untouched). On success the merged rules for every registered `ConfigurableProvider` are pushed via `Reload(...)` — hot reload, applies to the next request.
+* `DELETE /config` — unload: applies empty tuning (`Reload(nil, nil, nil, nil)`) to every `ConfigurableProvider` and clears the in-memory config.
 
 Format:
 ```json
@@ -146,13 +156,15 @@ Format:
 }
 ```
 
+Per-provider rules are merged over `global`: `exclude_keywords`/`include_keywords` unions; `categories` = global first, then provider-specific, first match wins; `account_mappings` = provider-specific only.
+
 `include_keywords` act as a whitelist when configured: only rows matching any include keyword pass through; everything else is skipped. When `include_keywords` is empty, exclude-only filtering applies.
 
 ### Hot-Reload
 
-No background goroutines. The `config.Loader` checks the config file's mtime on every call to `ProviderConfig()`. The service calls `loader.ProviderConfig(name)` and pushes the merged rules to the provider via `ConfigurableProvider.Reload()` **before each request** (`services/convert.go:reloadProvider`). Configuration changes take effect on the next request with zero delay.
+No background goroutines and no file-mtime polling (the old per-request `os.Stat`/`ReadFile`/`json.Unmarshal` path is gone). The service calls `loader.ProviderConfig(name)` — a memory read under the loader's mutex — and pushes the merged rules to the provider via `ConfigurableProvider.Reload()` **before each request** (`services/convert.go:reloadProvider`). A `POST /config` therefore takes effect on the next request with zero delay.
 
-Missing or invalid config — the loader logs a warning and returns empty rules (no crash).
+Rejected uploads — invalid JSON is returned as a 400 by the handler and leaves the current in-memory config untouched; providers keep their existing tuning.
 
 ### Shared Mapping
 
@@ -164,11 +176,15 @@ Providers use `shouldSkip()` via `rule.Engine`. When `include_keywords` are conf
 
 ### Auto-Categorization
 
-Providers use `matchCategory()` via `rule.Engine`. Case-insensitive, first match wins. Rules come from the merged `ProviderConfig` (global + provider-specific). Missing/invalid config file logs a warning and returns no categories.
+Providers use `matchCategory()` via `rule.Engine`. Case-insensitive, first match wins. Rules come from the merged `ProviderConfig` (global + provider-specific).
+
+### Sample Provider
+
+`internal/providers/sample/` is a source-only reference implementation of the full contract (`providers.Provider`, `providers.ConfigurableProvider`, `io.Closer`). It parses deterministically with synthetic data — no network, no credentials, no real personal data — and is **not** registered in `cmd/app/main.go`. To activate it, add its factory to the bootstrap map (see `docs/providers.md`). It demonstrates the real contract; it is not a separate architecture.
 
 ### Environment Variables
 
-* `PROVIDER_CONFIG_PATH` — path to provider config JSON
+* `PROVIDER_CONFIG_PATH` — path to the sample config file served by `GET /config` (default empty → 404). Never auto-applied.
 * `LOG_LEVEL=debug` — enables debug logging
 
 ---
@@ -180,6 +196,10 @@ Use:
 * Ginkgo
 * Gomega
 * httptest
+
+### Local Builds (CGO)
+
+The OCR provider (`hsbccredit` via gosseract) needs tesseract dev headers and `CGO_ENABLED=1`. When those headers are absent locally, build and test only non-OCR packages with `CGO_ENABLED=0` (config, services non-pdf, providers, rule, providers/sample). Do not install tesseract without permission.
 
 ### Data Privacy
 
