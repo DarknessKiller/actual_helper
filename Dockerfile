@@ -7,7 +7,7 @@ COPY frontend/ .
 RUN npm run build
 
 # Backend build stage
-FROM golang:1.26-alpine AS builder
+FROM golang:1.27-alpine AS builder
 WORKDIR /app
 RUN apk add --no-cache gcc g++ musl-dev tesseract-ocr-dev
 ARG VERSION
