@@ -37,6 +37,9 @@ func main() {
 	fuego.Use(server, ratelimit.Middleware)
 	handlers.RegisterConvertRoutes(server, handler)
 
+	configHandler := handlers.NewConfigHandler(loader, registry, env)
+	handlers.RegisterConfigRoutes(server.Mux, configHandler)
+
 	dist, err := fs.Sub(frontend.FS, "dist")
 	if err != nil {
 		dist = nil

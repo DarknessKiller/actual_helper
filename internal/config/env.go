@@ -16,7 +16,7 @@ func LoadEnv() Env {
 	return Env{
 		PublicURL:          getString("PUBLIC_URL", ""),
 		Port:               getInt("PORT", 8080),
-		ProviderConfigPath: getString("PROVIDER_CONFIG_PATH", "provider_config.example.json"),
+		ProviderConfigPath: getString("PROVIDER_CONFIG_PATH", ""),
 		Environment:        getString("APP_ENV", "development"),
 	}
 }

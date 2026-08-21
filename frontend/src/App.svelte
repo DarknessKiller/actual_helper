@@ -4,6 +4,7 @@
   import UploadForm from "$lib/components/UploadForm.svelte";
   import ResultPanel from "$lib/components/ResultPanel.svelte";
   import HistoryDashboard from "$lib/components/HistoryDashboard.svelte";
+  import ConfigPanel from "$lib/components/ConfigPanel.svelte";
   import { loadHistory } from "$lib/stores/history.js";
 
   let conversions = $state(loadHistory());
@@ -42,6 +43,7 @@
     class="max-w-2xl mx-auto px-4 py-6 sm:py-10"
     in:fade={{ duration: 300 }}
   >
+    <ConfigPanel />
     <UploadForm onConversionComplete={handleConversionComplete} />
 
     {#if lastConversion}

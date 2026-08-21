@@ -11,7 +11,7 @@ type ProviderFactory func(excludeKeywords, includeKeywords []string, categories 
 func Init(factories map[string]ProviderFactory) (*providers.Registry, *config.Loader, config.Env) {
 
 	env := config.LoadEnv()
-	loader := config.NewLoader(env.ProviderConfigPath)
+	loader := config.NewLoader()
 	registry := providers.NewRegistry()
 
 	for name, factory := range factories {
