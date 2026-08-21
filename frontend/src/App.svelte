@@ -6,10 +6,14 @@
   import HistoryDashboard from "$lib/components/HistoryDashboard.svelte";
   import ConfigPanel from "$lib/components/ConfigPanel.svelte";
   import { loadHistory } from "$lib/stores/history.js";
+  import { getTheme, setTheme } from "$lib/stores/theme.js";
 
   let conversions = $state(loadHistory());
   let lastConversion = $state(null);
   let version = $state("");
+  let theme = $state(getTheme());
+
+  const themes = ["light", "dark", "amoled"];
 
   onMount(async () => {
     try {
@@ -32,7 +36,19 @@
     <div class="flex-1">
       <span class="text-xl font-semibold px-4">Actual Helper</span>
     </div>
-    <div class="flex-none pr-4">
+    <div class="flex-none pr-4 flex items-center gap-3">
+      <div class="join">
+        {#each themes as t}
+          <button
+            class="join-item btn btn-sm {theme === t ? 'btn-accent' : 'btn-ghost'}"
+            class:btn-active={theme === t}
+            onclick={() => (theme = setTheme(t))}
+            aria-label="Theme: {t}"
+          >
+            {t === "light" ? "☀️" : t === "dark" ? "🌙" : "🖤"}
+          </button>
+        {/each}
+      </div>
       {#if version}
         <span class="badge badge-soft badge-accent">v{version}</span>
       {/if}
