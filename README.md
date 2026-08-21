@@ -8,7 +8,7 @@ A Go web server that converts bank and fintech transaction files into [Actual Bu
 
 - **Multi-provider architecture** — each financial institution gets its own provider package; easy to extend
 - **CSV & PDF support** — including password-protected PDFs via decryption
-- **Hot-reload configuration** — update filters, categories, and account mappings without restarting the server; takes effect on the next request
+- **Hot-reload configuration** — upload filters, categories, and account mappings via `POST /config` without restarting the server; takes effect on the next request
 - **Smart filtering** — `exclude_keywords` removes noise; `include_keywords` overrides exclusions to keep important rows
 - **Auto-categorization** — case-insensitive keyword matching with global and per-provider category rules; first match wins
 - **Account name mapping** — maps provider-specific account names to Actual Budget account names
@@ -28,9 +28,15 @@ The project follows strict three-layer separation:
 - **Service** — orchestrates conversion: looks up providers, reloads config, routes to CSV or PDF parsing, serializes output.
 - **Provider** — parses provider-specific file formats and maps fields to the shared output model.
 
-### Hot-Reload Design
+### Config Lifecycle
 
-Configuration is checked on every request by comparing the config file's mtime. No background goroutines or server restarts needed — changes apply instantly to the next request. Missing or invalid config logs a warning and returns empty rules; the server never crashes due to config issues.
+Providers are statically compiled into the binary and always active; configuration is tuning only. Config is empty by default and lives in memory — nothing is read from disk at startup or per request.
+
+- `GET /config` — download the sample config file (served from `PROVIDER_CONFIG_PATH`; `404` if unset/unreadable)
+- `POST /config` — upload a config `{global, providers}`; validated and hot-applied to every provider on the next request
+- `DELETE /config` — clear all tuning back to empty
+
+Invalid uploaded config is rejected with `400` and the previously loaded config stays active.
 
 ---
 
@@ -126,6 +132,8 @@ Configuration is checked on every request by comparing the config file's mtime. 
    - `cardutil.ApplyMapping(mapping, name)` — apply account name mapping from config
 5. Register the provider in `cmd/app/main.go`
 
+A source-only reference implementation lives at `internal/providers/sample/` (implements the full contract, not registered by default); see `docs/providers.md` for build/load instructions.
+
 ---
 
 ## API Reference
@@ -150,11 +158,23 @@ Converts a transaction file from the specified provider into Actual Budget CSV f
 | `400` | Missing file in request |
 | `500` | Unknown provider or processing error |
 
+### GET /config
+
+Downloads the sample config file (served from `PROVIDER_CONFIG_PATH`). `404` when the path is unset or unreadable.
+
+### POST /config
+
+Uploads a config JSON `{global, providers}`. Validated and hot-applied to every provider on the next request. Invalid JSON or missing body → `400` (previous config stays active).
+
+### DELETE /config
+
+Unloads the config: clears all tuning back to empty.
+
 ---
 
 ## Configuration
 
-Set the `PROVIDER_CONFIG_PATH` environment variable to point to a JSON configuration file.
+Providers run with empty tuning until you load a config via `POST /config` (or `DELETE /config` to clear it). `PROVIDER_CONFIG_PATH` only tells `GET /config` where the sample file lives — it is never auto-applied.
 
 ### Schema
 
@@ -230,7 +250,7 @@ Set the `PROVIDER_CONFIG_PATH` environment variable to point to a JSON configura
 | `categories` | Global rules first, then provider-specific rules appended; first match wins |
 | `account_mappings` | Provider-specific only |
 
-Config file is optional. If missing, invalid, or unset, the server logs a warning and runs without filtering or categorization.
+Config is optional and empty by default. Invalid uploads are rejected with `400` and the previously loaded config stays active.
 
 ---
 
