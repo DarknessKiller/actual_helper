@@ -1,6 +1,8 @@
 module actual_helper
 
-go 1.26.4
+go 1.27
+
+toolchain go1.27.0
 
 require (
 	github.com/getkin/kin-openapi v0.133.0
