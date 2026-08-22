@@ -108,9 +108,13 @@
       <button class="btn-ghost-apple h-9" data-danger onclick={handleUnload} disabled={status === "loading"}>
         Unload
       </button>
+    {:else}
+      <span class="btn-ghost-apple h-9 invisible">Unload</span>
     {/if}
     {#if status === "loading"}
       <span class="progress-apple w-16 self-center"><div style="width: 70%"></div></span>
+    {:else}
+      <span class="w-16 self-center"></span>
     {/if}
   </div>
 </div>
