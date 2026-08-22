@@ -4,7 +4,6 @@
 
   let status = $state("idle"); // idle | loading | success | error
   let message = $state("");
-  let applied = $state([]);
   let fileInput = $state(null);
   let loaded = $state(false);
 
@@ -33,12 +32,10 @@
     status = "loading";
     message = "";
     try {
-      applied = await uploadConfig(f);
+      await uploadConfig(f);
       loaded = true;
       status = "success";
-      message = `Config applied to ${applied.length} provider${
-        applied.length === 1 ? "" : "s"
-      }.`;
+      message = "Config loaded.";
       if (fileInput) fileInput.value = "";
     } catch (err) {
       status = "error";
@@ -52,7 +49,6 @@
     try {
       await unloadConfig();
       loaded = false;
-      applied = [];
       status = "success";
       message = "Config cleared. Providers run with empty tuning.";
     } catch (err) {
@@ -67,81 +63,54 @@
   }
 </script>
 
-<div class="card bg-base-100 shadow-md" in:fade={{ duration: 400 }}>
-  <div class="card-body">
-    <h2 class="card-title text-lg">Provider Config</h2>
-    <p class="text-sm text-base-content/60 mb-3">
-      Load a provider config to tune filtering and categorization, or download
-      the sample to edit. Unload to revert providers to empty tuning.
-    </p>
+<div class="glass rounded-2xl px-5 py-4 mb-5" in:fade={{ duration: 400 }}>
+  <h2 class="text-[15px] font-semibold tracking-tight">Provider configuration</h2>
+  <p class="text-[13px] copy mt-0.5">
+    Load a JSON config to set filters, categories, and account mappings for this
+    session. Unload to revert providers to empty tuning.
+  </p>
 
-    {#if status === "error"}
-      <div
-        role="alert"
-        class="alert alert-error mb-3"
-        in:fly={{ y: -20, duration: 300 }}
-      >
-        <span>{message}</span>
-        <button class="btn btn-sm btn-ghost" onclick={handleDismiss}
-          >Dismiss</button
-        >
-      </div>
-    {:else if status === "success" && message}
-      <div
-        class="alert alert-success mb-3"
-        in:fly={{ y: -20, duration: 300 }}
-      >
-        <span>{message}</span>
-        <button class="btn btn-sm btn-ghost" onclick={handleDismiss}>OK</button>
-      </div>
-    {/if}
-
-    <div class="flex flex-wrap gap-2">
-      <button
-        class="btn btn-outline btn-sm"
-        onclick={handleDownload}
-        disabled={status === "loading"}
-      >
-        Download sample
-      </button>
-
-      <label
-        class="btn btn-primary btn-sm"
-        class:btn-disabled={status === "loading"}
-      >
-        Load config
-        <input
-          type="file"
-          accept="application/json,.json"
-          class="hidden"
-          bind:this={fileInput}
-          onchange={handleFileSelect}
-        />
-      </label>
-
-      {#if loaded}
-        <button
-          class="btn btn-ghost btn-sm text-error"
-          onclick={handleUnload}
-          disabled={status === "loading"}
-        >
-          Unload
-        </button>
-      {/if}
-
-      {#if status === "loading"}
-        <span
-          class="loading loading-spinner loading-sm self-center text-base-content/50"
-        ></span>
-      {/if}
+  {#if status === "error"}
+    <div
+      role="alert"
+      class="rounded-2xl p-3 mt-3 flex items-center gap-3 text-danger"
+      in:fly={{ y: -8, duration: 250 }}
+    >
+      <span class="flex-1 text-sm">{message}</span>
+      <button class="btn-ghost-apple h-8 px-3 text-sm" onclick={handleDismiss}>Dismiss</button>
     </div>
+  {:else if status === "success" && message}
+    <div
+      class="rounded-2xl p-3 mt-3 flex items-center gap-3 text-success"
+      in:fly={{ y: -8, duration: 250 }}
+    >
+      <span class="flex-1 text-sm">{message}</span>
+      <button class="btn-ghost-apple h-8 px-3 text-sm" onclick={handleDismiss}>OK</button>
+    </div>
+  {/if}
 
-    {#if loaded && applied.length > 0}
-      <div class="mt-3 flex flex-wrap gap-1">
-        {#each applied as name}
-          <span class="badge badge-outline badge-sm">{name}</span>
-        {/each}
-      </div>
+  <div class="flex flex-wrap gap-2 mt-3">
+    <label class="btn-ghost-apple h-9 border border-[var(--ah-accent-border)]" class:opacity-50={status === "loading"}>
+      Load JSON
+      <input
+        bind:this={fileInput}
+        class="hidden"
+        type="file"
+        accept="application/json,.json"
+        onchange={handleFileSelect}
+        disabled={status === "loading"}
+      />
+    </label>
+    <button class="btn-ghost-apple h-9" onclick={handleDownload} disabled={status === "loading"}>
+      Download Sample
+    </button>
+    {#if loaded}
+      <button class="btn-ghost-apple h-9" data-danger onclick={handleUnload} disabled={status === "loading"}>
+        Unload
+      </button>
+    {/if}
+    {#if status === "loading"}
+      <span class="progress-apple w-16 self-center"><div style="width: 70%"></div></span>
     {/if}
   </div>
 </div>
