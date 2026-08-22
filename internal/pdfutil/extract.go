@@ -9,7 +9,8 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"sort"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/ledongthuc/pdf"
@@ -154,21 +155,12 @@ func extractWithOCR(ctx context.Context, data []byte) (string, error) {
 	ctx, cancel := context.WithTimeout(ctx, timeoutOCR)
 	defer cancel()
 
-	// PDF → PNG via pdftoppm (subprocess, context-cancellable)
-	outPrefix := filepath.Join(tmpDir, "page")
-	cmd := exec.CommandContext(ctx, "pdftoppm", "-png", "-r", "200", pdfPath, outPrefix)
-	if out, err := cmd.CombinedOutput(); err != nil {
-		if ctx.Err() != nil {
-			return "", fmt.Errorf("pdftoppm timeout: %w", ctx.Err())
-		}
-		return "", fmt.Errorf("pdftoppm failed: %w\n%s", err, string(out))
-	}
-
-	matches, err := filepath.Glob(filepath.Join(tmpDir, "page-*.png"))
+	// Page count via pdfinfo (cheap, poppler) so we render one page at a time
+	// instead of all at once — keeps peak memory to a single page's PNG.
+	pageCount, err := pdfPageCount(ctx, pdfPath)
 	if err != nil {
-		return "", fmt.Errorf("find page images: %w", err)
+		return "", fmt.Errorf("get page count: %w", err)
 	}
-	sort.Strings(matches)
 
 	client, err := newOCRClient()
 	if err != nil {
@@ -177,14 +169,26 @@ func extractWithOCR(ctx context.Context, data []byte) (string, error) {
 	defer client.Close()
 
 	var text string
-	for _, pagePath := range matches {
+	for page := 1; page <= pageCount; page++ {
 		if ctx.Err() != nil {
 			return "", ctx.Err()
 		}
 
+		// Render only this page, OCR it, then delete it before the next —
+		// peak disk + memory is one page, not the whole document.
+		pagePath := filepath.Join(tmpDir, fmt.Sprintf("page-%d.png", page))
+		rcmd := exec.CommandContext(ctx, "pdftoppm", "-png", "-r", "150", "-f", strconv.Itoa(page), "-l", strconv.Itoa(page), pdfPath, filepath.Join(tmpDir, "page"))
+		if out, err := rcmd.CombinedOutput(); err != nil {
+			if ctx.Err() != nil {
+				return "", fmt.Errorf("pdftoppm timeout: %w", ctx.Err())
+			}
+			slog.Warn("pdftoppm page failed, skipping", "page", page, "error", err, "output", string(out))
+			continue
+		}
+
 		stripPaths, err := splitIntoStrips(ctx, pagePath)
 		if err != nil {
-			slog.Warn("failed to split page into strips, trying full page", "path", pagePath, "error", err)
+			slog.Warn("failed to split page into strips, trying full page", "page", page, "error", err)
 			stripPaths = []string{pagePath}
 		}
 
@@ -204,6 +208,8 @@ func extractWithOCR(ctx context.Context, data []byte) (string, error) {
 			slog.Debug("ocr strip extracted", "path", stripPath, "chars", len(pageText))
 			text += pageText + "\n"
 		}
+
+		os.Remove(pagePath)
 	}
 
 	return text, nil
@@ -253,4 +259,23 @@ func splitIntoStrips(ctx context.Context, path string) ([]string, error) {
 	return strips, nil
 }
 
-
+// pdfPageCount returns the number of pages in a PDF via the pdfinfo CLI
+// (poppler-utils, present in the Docker runtime image).
+func pdfPageCount(ctx context.Context, pdfPath string) (int, error) {
+	var out bytes.Buffer
+	cmd := exec.CommandContext(ctx, "pdfinfo", pdfPath)
+	cmd.Stdout = &out
+	if err := cmd.Run(); err != nil {
+		return 0, fmt.Errorf("pdfinfo: %w", err)
+	}
+	for _, line := range strings.Split(out.String(), "\n") {
+		if strings.HasPrefix(line, "Pages:") {
+			n, err := strconv.Atoi(strings.TrimSpace(strings.TrimPrefix(line, "Pages:")))
+			if err != nil {
+				return 0, fmt.Errorf("parse page count: %w", err)
+			}
+			return n, nil
+		}
+	}
+	return 0, fmt.Errorf("page count not found in pdfinfo output")
+}
