@@ -119,13 +119,15 @@
         />
       </label>
 
-      <button
-        class="btn btn-ghost btn-sm text-error"
-        onclick={handleUnload}
-        disabled={status === "loading" || !loaded}
-      >
-        Unload
-      </button>
+      {#if loaded}
+        <button
+          class="btn btn-ghost btn-sm text-error"
+          onclick={handleUnload}
+          disabled={status === "loading"}
+        >
+          Unload
+        </button>
+      {/if}
 
       {#if status === "loading"}
         <span
