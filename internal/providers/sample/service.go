@@ -143,7 +143,7 @@ func (p *SampleProvider) ParsePDFText(_ context.Context, text string) ([]models.
 }
 
 // ExtractionMethod returns a non-OCR method so the service never routes the
-// sample provider through the gosseract/CGO OCR path.
+// sample provider through the tesseract CLI subprocess OCR path.
 func (p *SampleProvider) ExtractionMethod() pdfutil.ExtractionMethod {
 	return pdfutil.ExtractionMethodDigital
 }

@@ -197,9 +197,9 @@ Use:
 * Gomega
 * httptest
 
-### Local Builds (CGO)
+### OCR via tesseract CLI subprocess
 
-The OCR provider (`hsbccredit` via gosseract) needs tesseract dev headers and `CGO_ENABLED=1`. When those headers are absent locally, build and test only non-OCR packages with `CGO_ENABLED=0` (config, services non-pdf, providers, rule, providers/sample). Do not install tesseract without permission.
+OCR (`hsbccredit`) shells out to the `tesseract` CLI via `exec.CommandContext`, not a CGO binding. This makes OCR cleanly cancellable on context timeout (no stuck-forever, no leaked C memory). The project builds with `CGO_ENABLED=0` — no tesseract dev headers needed for compilation. The runtime image must have `tesseract-ocr` + language data installed (see Dockerfile runtime stage).
 
 ### Data Privacy
 
