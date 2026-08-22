@@ -224,7 +224,7 @@
       <span class="progress-apple w-24"><div style="width: 70%"></div></span>
       Converting…
     {:else}
-      Convert to Actual CSV
+      Convert
     {/if}
   </button>
 </div>
