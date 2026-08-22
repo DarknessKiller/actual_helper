@@ -6,24 +6,22 @@ RUN npm ci
 COPY frontend/ .
 RUN npm run build
 
-# Backend build stage
+# Backend build stage — pure Go, no CGO (tesseract CLI subprocess replaces gosseract CGO binding)
 FROM golang:1.27-alpine AS builder
 WORKDIR /app
-RUN apk add --no-cache gcc g++ musl-dev tesseract-ocr-dev
 ARG VERSION
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
 COPY --from=frontend-builder /app/dist frontend/dist
-RUN CGO_ENABLED=1 GOOS=linux go build -tags embed -trimpath \
+RUN CGO_ENABLED=0 GOOS=linux go build -tags embed -trimpath \
     -ldflags="-s -w -X actual_helper/internal/config.Version=${VERSION:-$(git describe --tags --always --dirty)}" \
     -o actual_helper ./cmd/app
 
 # Runtime stage
 FROM alpine:3.23
 RUN echo "https://dl-cdn.alpinelinux.org/alpine/v3.23/community" >> /etc/apk/repositories \
- && apk add --no-cache tesseract-ocr tesseract-ocr-data-eng tesseract-ocr-data-msa poppler-utils imagemagick \
-    libstdc++ libgcc
+ && apk add --no-cache tesseract-ocr tesseract-ocr-data-eng tesseract-ocr-data-msa poppler-utils imagemagick
 WORKDIR /app
 COPY --from=builder /app/actual_helper actual_helper
 COPY --from=builder /app/provider_config.example.json provider_config.example.json
