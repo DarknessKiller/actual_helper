@@ -220,47 +220,25 @@ var _ = Describe("ExtractStatementYear", func() {
 GX Savings Account
 May 2026
 Closing balance (RM)`
-		Expect(gxbank.ExtractStatementYear(text)).To(Equal("2026"))
+		Expect(gxbank.ExtractStatementYearForTest(text)).To(Equal("2026"))
 	})
 
 	It("handles different months", func() {
-		Expect(gxbank.ExtractStatementYear("January 2025")).To(Equal("2025"))
-		Expect(gxbank.ExtractStatementYear("December 2024")).To(Equal("2024"))
+		Expect(gxbank.ExtractStatementYearForTest("January 2025")).To(Equal("2025"))
+		Expect(gxbank.ExtractStatementYearForTest("December 2024")).To(Equal("2024"))
 	})
 
 	It("returns empty when no year found", func() {
-		Expect(gxbank.ExtractStatementYear("no dates here")).To(BeEmpty())
+		Expect(gxbank.ExtractStatementYearForTest("no dates here")).To(BeEmpty())
 	})
 
 	It("returns empty for empty text", func() {
-		Expect(gxbank.ExtractStatementYear("")).To(BeEmpty())
+		Expect(gxbank.ExtractStatementYearForTest("")).To(BeEmpty())
 	})
 
 	It("returns first year found in cross-month statement", func() {
-		// Dec 2025 → Jan 2026 statement: ExtractStatementYear returns first match (2025)
 		text := `December 2025
-Closing balance (RM)
-Baki penutup
-31 Dec 2025
-12:00 AM
-Opening balance
-5,000.00
-31 Dec
-11:59 PM
-Interest earned
-+1.50
-5,001.50
-1 Jan 2026
-12:00 AM
-Opening balance
-5,001.50
-1 Jan
-9:00 AM
-Transfer In
-+100.00
-5,101.50`
-		// ExtractStatementYear returns "2025" (first match), which is correct for Dec but wrong for Jan
-		// This is a known limitation for cross-year statements
-		Expect(gxbank.ExtractStatementYear(text)).To(Equal("2025"))
+Closing balance (RM)`
+		Expect(gxbank.ExtractStatementYearForTest(text)).To(Equal("2025"))
 	})
 })

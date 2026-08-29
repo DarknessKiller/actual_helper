@@ -7,48 +7,30 @@ import (
 	"log/slog"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"actual_helper/internal/models"
 	"actual_helper/internal/pdfutil"
 	"actual_helper/internal/providers"
 	"actual_helper/internal/rule"
+	"actual_helper/internal/textutil"
 )
 
 type RytProvider struct {
-	engine         *rule.Engine
-	mu             sync.RWMutex
-	accountMapping map[string]string
+	engine *rule.Engine
 }
 
 func New(excludeKeywords, includeKeywords []string, categories []models.CategoryRule, accountMappings map[string]string) providers.Provider {
-	return &RytProvider{
-		engine:         rule.NewEngine(excludeKeywords, includeKeywords, categories),
-		accountMapping: accountMappings,
-	}
+	return &RytProvider{engine: rule.NewEngine(excludeKeywords, includeKeywords, categories, accountMappings)}
 }
 
 func (p *RytProvider) Reload(excludeKeywords, includeKeywords []string, categories []models.CategoryRule, accountMappings map[string]string) {
-	p.engine.Reload(excludeKeywords, includeKeywords, categories)
-	p.mu.Lock()
-	p.accountMapping = accountMappings
-	p.mu.Unlock()
+	p.engine.Reload(excludeKeywords, includeKeywords, categories, accountMappings)
 }
 
-func (p *RytProvider) shouldSkip(description string) bool {
-	return p.engine.ShouldSkip(description)
-}
+func (p *RytProvider) Name() string { return "ryt" }
 
-func (p *RytProvider) matchCategory(description string) (string, string) {
-	return p.engine.MatchCategory(description)
-}
-
-func (p *RytProvider) Name() string {
-	return "ryt"
-}
-
-func (p *RytProvider) ParseCSV(ctx context.Context, r io.Reader) ([]models.ActualBudgetReport, error) {
+func (p *RytProvider) ParseCSV(_ context.Context, _ io.Reader) ([]models.ActualBudgetReport, error) {
 	return nil, errors.New("not supported for ryt provider")
 }
 
@@ -56,7 +38,6 @@ func (p *RytProvider) ParsePDFText(ctx context.Context, text string) ([]models.A
 	logger := slog.With("provider", "ryt", "format", "pdf")
 
 	accountName := extractAccountName(text)
-
 	reports, err := parseBlocks(text)
 	if err != nil {
 		return nil, err
@@ -73,16 +54,8 @@ func (p *RytProvider) ParsePDFText(ctx context.Context, text string) ([]models.A
 }
 
 func (p *RytProvider) toActualReports(ctx context.Context, logger *slog.Logger, reports []RytReport, accountName string) []models.ActualBudgetReport {
+	accountName = p.engine.MapAccount(accountName)
 	var result []models.ActualBudgetReport
-
-	// Apply account mapping once before the loop
-	p.mu.RLock()
-	if p.accountMapping != nil {
-		if mapped, ok := p.accountMapping[accountName]; ok {
-			accountName = mapped
-		}
-	}
-	p.mu.RUnlock()
 
 	for _, report := range reports {
 		if strings.Contains(strings.ToLower(report.Description), "opening balance") {
@@ -90,7 +63,7 @@ func (p *RytProvider) toActualReports(ctx context.Context, logger *slog.Logger, 
 			continue
 		}
 
-		if p.shouldSkip(report.Description) {
+		if p.engine.ShouldSkip(report.Description) {
 			logger.DebugContext(ctx, "row skipped: filtered description", "description", report.Description)
 			continue
 		}
@@ -101,24 +74,23 @@ func (p *RytProvider) toActualReports(ctx context.Context, logger *slog.Logger, 
 			continue
 		}
 
-		description := strings.TrimSpace(whitespaceRe.ReplaceAllString(report.Description, " "))
+		description := textutil.Collapse(report.Description)
 
-		amountStr := strings.ReplaceAll(report.Amount, ",", "")
-		amount, err := strconv.ParseFloat(amountStr, 64)
+		amount, err := textutil.ParseAmount(report.Amount)
 		if err != nil || amount == 0 {
 			logger.DebugContext(ctx, "row skipped: invalid amount", "raw", report.Amount)
 			continue
 		}
 
-		categoryGroup, category := p.matchCategory(description)
+		grp, cat := p.engine.MatchCategory(description)
 
 		result = append(result, models.ActualBudgetReport{
 			Account:       accountName,
 			Date:          parsedDate.Format("2006-01-02"),
 			Payee:         "",
 			Notes:         description,
-			CategoryGroup: categoryGroup,
-			Category:      category,
+			CategoryGroup: grp,
+			Category:      cat,
 			Amount:        strconv.FormatFloat(amount, 'f', 2, 64),
 		})
 	}

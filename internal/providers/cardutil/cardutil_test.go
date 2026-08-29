@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"actual_helper/internal/providers/cardutil"
+	"actual_helper/internal/rule"
 
 	"github.com/stretchr/testify/require"
 )
@@ -48,8 +49,7 @@ func TestExtractAfterMarker(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := cardutil.ExtractAfterMarker(tt.text, tt.marker, tt.fallback)
-			require.Equal(t, tt.want, got)
+			require.Equal(t, tt.want, cardutil.ExtractAfterMarker(tt.text, tt.marker, tt.fallback))
 		})
 	}
 }
@@ -94,13 +94,12 @@ func TestExtractNearCardType(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := cardutil.ExtractNearCardType(tt.text, tt.cardTypes, tt.fallback)
-			require.Equal(t, tt.want, got)
+			require.Equal(t, tt.want, cardutil.ExtractNearCardType(tt.text, tt.cardTypes, tt.fallback))
 		})
 	}
 }
 
-func TestApplyMapping(t *testing.T) {
+func TestMapAccountViaEngine(t *testing.T) {
 	tests := []struct {
 		name    string
 		mapping map[string]string
@@ -129,8 +128,8 @@ func TestApplyMapping(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := cardutil.ApplyMapping(tt.mapping, tt.input)
-			require.Equal(t, tt.want, got)
+			e := rule.NewEngine(nil, nil, nil, tt.mapping)
+			require.Equal(t, tt.want, e.MapAccount(tt.input))
 		})
 	}
 }

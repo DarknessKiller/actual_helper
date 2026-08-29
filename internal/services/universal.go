@@ -4,25 +4,29 @@ import (
 	"bytes"
 	"encoding/csv"
 	"fmt"
-	"reflect"
 
 	"actual_helper/internal/models"
 )
+
+var actualBudgetReportHeader = []string{
+	"Account", "Date", "Payee", "Notes",
+	"Category_Group", "Category", "Amount", "Split_Amount", "Cleared",
+}
 
 func ToActualCSV(reports []models.ActualBudgetReport) ([]byte, error) {
 	var buffer bytes.Buffer
 	writer := csv.NewWriter(&buffer)
 
-	header, err := csvHeader()
-	if err != nil {
-		return nil, err
-	}
-	if err := writer.Write(header); err != nil {
+	if err := writer.Write(actualBudgetReportHeader); err != nil {
 		return nil, fmt.Errorf("write header: %w", err)
 	}
 
 	for _, report := range reports {
-		row := csvRow(report)
+		row := []string{
+			report.Account, report.Date, report.Payee, report.Notes,
+			report.CategoryGroup, report.Category, report.Amount,
+			report.SplitAmount, report.Cleared,
+		}
 		if err := writer.Write(row); err != nil {
 			return nil, fmt.Errorf("write row: %w", err)
 		}
@@ -34,26 +38,4 @@ func ToActualCSV(reports []models.ActualBudgetReport) ([]byte, error) {
 	}
 
 	return buffer.Bytes(), nil
-}
-
-func csvHeader() ([]string, error) {
-	reportType := reflect.TypeFor[models.ActualBudgetReport]()
-	columns := make([]string, reportType.NumField())
-	for i := range reportType.NumField() {
-		tag := reportType.Field(i).Tag.Get("csv")
-		if tag == "" {
-			return nil, fmt.Errorf("field %q missing csv tag", reportType.Field(i).Name)
-		}
-		columns[i] = tag
-	}
-	return columns, nil
-}
-
-func csvRow(report models.ActualBudgetReport) []string {
-	reportValue := reflect.ValueOf(report)
-	columns := make([]string, reportValue.NumField())
-	for i := range reportValue.NumField() {
-		columns[i] = reportValue.Field(i).String()
-	}
-	return columns
 }

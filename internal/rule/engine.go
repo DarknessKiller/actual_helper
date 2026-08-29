@@ -11,23 +11,26 @@ type Engine struct {
 	excludeKeywords []string
 	includeKeywords []string
 	categories      []models.CategoryRule
+	accountMapping  map[string]string
 	mu              sync.RWMutex
 }
 
-func NewEngine(excludeKeywords, includeKeywords []string, categories []models.CategoryRule) *Engine {
+func NewEngine(excludeKeywords, includeKeywords []string, categories []models.CategoryRule, accountMapping map[string]string) *Engine {
 	return &Engine{
 		excludeKeywords: lowerSlice(excludeKeywords),
 		includeKeywords: lowerSlice(includeKeywords),
 		categories:      copyCategories(categories),
+		accountMapping:  copyMapping(accountMapping),
 	}
 }
 
-func (e *Engine) Reload(excludeKeywords, includeKeywords []string, categories []models.CategoryRule) {
+func (e *Engine) Reload(excludeKeywords, includeKeywords []string, categories []models.CategoryRule, accountMapping map[string]string) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	e.excludeKeywords = lowerSlice(excludeKeywords)
 	e.includeKeywords = lowerSlice(includeKeywords)
 	e.categories = copyCategories(categories)
+	e.accountMapping = copyMapping(accountMapping)
 }
 
 func (e *Engine) ShouldSkip(description string) bool {
@@ -66,6 +69,19 @@ func (e *Engine) MatchCategory(description string) (string, string) {
 	return "", ""
 }
 
+// MapAccount returns the mapped account name, or the original if no mapping exists.
+func (e *Engine) MapAccount(name string) string {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+	if e.accountMapping == nil {
+		return name
+	}
+	if mapped, ok := e.accountMapping[name]; ok {
+		return mapped
+	}
+	return name
+}
+
 func lowerSlice(s []string) []string {
 	if s == nil {
 		return nil
@@ -83,5 +99,16 @@ func copyCategories(c []models.CategoryRule) []models.CategoryRule {
 	}
 	out := make([]models.CategoryRule, len(c))
 	copy(out, c)
+	return out
+}
+
+func copyMapping(m map[string]string) map[string]string {
+	if m == nil {
+		return nil
+	}
+	out := make(map[string]string, len(m))
+	for k, v := range m {
+		out[k] = v
+	}
 	return out
 }

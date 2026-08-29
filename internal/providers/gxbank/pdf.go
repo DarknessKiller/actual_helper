@@ -25,7 +25,7 @@ func ParsePDFBlocks(text string) ([]GXReport, error) {
 
 	body := text[idx+len(marker):]
 	lines := strings.Split(body, "\n")
-	year := ExtractStatementYear(text)
+	year := extractStatementYear(text)
 	if year == "" {
 		return nil, errors.New("no statement year found in document header")
 	}
@@ -162,7 +162,7 @@ func ExtractAccountName(text string) string {
 	return "GX Bank"
 }
 
-func ExtractStatementYear(text string) string {
+func extractStatementYear(text string) string {
 	lines := strings.Split(text, "\n")
 	for _, line := range lines {
 		trimmed := strings.TrimSpace(line)
@@ -172,3 +172,6 @@ func ExtractStatementYear(text string) string {
 	}
 	return ""
 }
+
+// ExtractStatementYearForTest exposes the helper for the test package only.
+func ExtractStatementYearForTest(text string) string { return extractStatementYear(text) }

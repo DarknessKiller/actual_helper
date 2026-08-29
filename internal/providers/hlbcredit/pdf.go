@@ -92,7 +92,6 @@ func parseTransactionLine(line string, stmtDate time.Time) (HLBReport, error) {
 	}
 
 	transDateStr := matches[1]
-	postDateStr := matches[2]
 	description := strings.TrimSpace(matches[3])
 	amountStr := matches[4]
 	isCredit := matches[5] == "CR"
@@ -101,14 +100,9 @@ func parseTransactionLine(line string, stmtDate time.Time) (HLBReport, error) {
 	if err != nil {
 		return HLBReport{}, err
 	}
-	postDate, err := dateutil.FormatDate(postDateStr, stmtDate)
-	if err != nil {
-		return HLBReport{}, err
-	}
 
 	return HLBReport{
 		TransDate:   transDate,
-		PostDate:    postDate,
 		Description: description,
 		Amount:      amountStr,
 		IsCredit:    isCredit,

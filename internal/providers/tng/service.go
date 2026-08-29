@@ -6,83 +6,45 @@ import (
 	"io"
 	"log/slog"
 	"strconv"
-	"strings"
-	"sync"
 	"time"
 
 	"actual_helper/internal/models"
 	"actual_helper/internal/pdfutil"
 	"actual_helper/internal/providers"
 	"actual_helper/internal/rule"
+	"actual_helper/internal/textutil"
 )
 
-type TNGTransactionType string
-
-const (
-	Reload             TNGTransactionType = "Reload"
-	ReceiveFromWallet  TNGTransactionType = "Receive from Wallet"
-	DuitNowReceiveFrom TNGTransactionType = "DUITNOW_RECEIVEFROM"
-	Refund             TNGTransactionType = "Refund"
-	GODailyEarnings    TNGTransactionType = "GO+ Daily Earnings"
-	GOPlusCashIn       TNGTransactionType = "GO+ Cash In"
-)
-
-var creditTransactionTypes = map[TNGTransactionType]struct{}{
-	Reload:             {},
-	ReceiveFromWallet:  {},
-	DuitNowReceiveFrom: {},
-	Refund:             {},
-	GODailyEarnings:    {},
-	GOPlusCashIn:       {},
+var creditTransactionTypes = map[string]struct{}{
+	"Reload":              {},
+	"Receive from Wallet": {},
+	"DUITNOW_RECEIVEFROM": {},
+	"Refund":              {},
+	"GO+ Daily Earnings":  {},
+	"GO+ Cash In":         {},
 }
 
 type TNGProvider struct {
-	engine         *rule.Engine
-	mu             sync.RWMutex
-	accountMapping map[string]string
+	engine *rule.Engine
 }
 
 func New(excludeKeywords, includeKeywords []string, categories []models.CategoryRule, accountMappings map[string]string) providers.Provider {
-	return &TNGProvider{
-		engine:         rule.NewEngine(excludeKeywords, includeKeywords, categories),
-		accountMapping: accountMappings,
-	}
+	return &TNGProvider{engine: rule.NewEngine(excludeKeywords, includeKeywords, categories, accountMappings)}
 }
 
 func (p *TNGProvider) Reload(excludeKeywords, includeKeywords []string, categories []models.CategoryRule, accountMappings map[string]string) {
-	p.engine.Reload(excludeKeywords, includeKeywords, categories)
-	p.mu.Lock()
-	p.accountMapping = accountMappings
-	p.mu.Unlock()
+	p.engine.Reload(excludeKeywords, includeKeywords, categories, accountMappings)
 }
 
-func (p *TNGProvider) shouldSkip(description string) bool {
-	return p.engine.ShouldSkip(description)
-}
-
-func (p *TNGProvider) matchCategory(description string) (string, string) {
-	return p.engine.MatchCategory(description)
-}
-
-func (p *TNGProvider) Name() string {
-	return "tng"
-}
+func (p *TNGProvider) Name() string { return "tng" }
 
 func (p *TNGProvider) ParseCSV(_ context.Context, _ io.Reader) ([]models.ActualBudgetReport, error) {
 	return nil, errors.New("not supported for tng provider")
 }
 
 func (p *TNGProvider) toActualReports(ctx context.Context, logger *slog.Logger, reports []TNGReport, accountName string) []models.ActualBudgetReport {
+	accountName = p.engine.MapAccount(accountName)
 	var result []models.ActualBudgetReport
-
-	// Apply account mapping once before the loop
-	p.mu.RLock()
-	if p.accountMapping != nil {
-		if mapped, ok := p.accountMapping[accountName]; ok {
-			accountName = mapped
-		}
-	}
-	p.mu.RUnlock()
 
 	for _, report := range reports {
 		if report.Status != "Success" {
@@ -90,20 +52,20 @@ func (p *TNGProvider) toActualReports(ctx context.Context, logger *slog.Logger, 
 			continue
 		}
 
-		if p.shouldSkip(report.Description) {
+		if p.engine.ShouldSkip(report.Description) {
 			logger.DebugContext(ctx, "row skipped: filtered description", "description", report.Description)
 			continue
 		}
 
-		parsedDate, err := parseDate(report.Date)
+		parsedDate, err := textutil.ParseDateMulti(report.Date, "2/1/2006", "02/01/2006")
 		if err != nil {
 			logger.DebugContext(ctx, "row skipped: invalid date", "raw", report.Date)
 			continue
 		}
 
-		description := strings.TrimSpace(whitespaceRe.ReplaceAllString(report.Description, " "))
+		description := textutil.Collapse(report.Description)
 
-		amount, err := parseAmount(report.Amount)
+		amount, err := textutil.ParseAmount(report.Amount, "RM")
 		if err != nil || amount == 0 {
 			logger.DebugContext(ctx, "row skipped: invalid amount", "raw", report.Amount)
 			continue
@@ -113,15 +75,15 @@ func (p *TNGProvider) toActualReports(ctx context.Context, logger *slog.Logger, 
 			amount = -amount
 		}
 
-		categoryGroup, category := p.matchCategory(description)
+		grp, cat := p.engine.MatchCategory(description)
 
 		result = append(result, models.ActualBudgetReport{
 			Account:       accountName,
 			Date:          parsedDate.Format("2006-01-02"),
 			Payee:         "",
 			Notes:         description,
-			CategoryGroup: categoryGroup,
-			Category:      category,
+			CategoryGroup: grp,
+			Category:      cat,
 			Amount:        strconv.FormatFloat(amount, 'f', 2, 64),
 		})
 	}
@@ -148,24 +110,13 @@ func (p *TNGProvider) ParsePDFText(ctx context.Context, text string) ([]models.A
 }
 
 func isCredit(transactionType string) bool {
-	_, ok := creditTransactionTypes[TNGTransactionType(transactionType)]
+	_, ok := creditTransactionTypes[transactionType]
 	return ok
-}
-
-func parseDate(raw string) (time.Time, error) {
-	t, err := time.Parse("2/1/2006", raw)
-	if err != nil {
-		t, err = time.Parse("02/01/2006", raw)
-	}
-	return t, err
-}
-
-func parseAmount(amountStr string) (float64, error) {
-	amountStr = strings.ReplaceAll(amountStr, "RM", "")
-	amountStr = strings.ReplaceAll(amountStr, ",", "")
-	return strconv.ParseFloat(amountStr, 64)
 }
 
 func (p *TNGProvider) ExtractionMethod() pdfutil.ExtractionMethod {
 	return pdfutil.ExtractionMethodDigital
 }
+
+// time import retained for refactor compatibility with future providers.
+var _ = time.Time{}

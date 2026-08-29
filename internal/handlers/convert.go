@@ -36,8 +36,6 @@ func (handler *ConvertHandler) Convert(c fuego.ContextWithBody[ConvertRequestBod
 	}
 	defer file.Close()
 
-	c.Request().Header.Set("Content-Type", "multipart/form-data")
-
 	body, err := c.Body()
 	if err != nil {
 		return nil, fuego.BadRequestError{Title: "Invalid form", Detail: err.Error()}

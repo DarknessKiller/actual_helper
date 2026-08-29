@@ -59,14 +59,3 @@ func ExtractNearCardType(text string, cardTypes []string, fallback string) strin
 	slog.Debug("card number not found near card type indicators", "card_types", cardTypes)
 	return fallback
 }
-
-// ApplyMapping looks up account name in mapping, returns original if not found.
-func ApplyMapping(mapping map[string]string, name string) string {
-	if mapping == nil {
-		return name
-	}
-	if mapped, ok := mapping[name]; ok {
-		return mapped
-	}
-	return name
-}
