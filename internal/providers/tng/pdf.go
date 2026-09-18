@@ -5,8 +5,6 @@ import (
 	"log/slog"
 	"regexp"
 	"strings"
-
-	"actual_helper/internal/dateutil"
 )
 
 var (
@@ -18,12 +16,11 @@ func parsePDFBlocks(text string) ([]TNGReport, error) {
 	const marker = "TNG WALLET TRANSACTION"
 	idx := strings.LastIndex(text, marker)
 	if idx == -1 {
-		slog.Debug("marker not found in text", "text_preview", dateutil.Truncate(text, 200))
+		slog.Debug("marker not found in text")
 		return nil, errors.New("no transactions section found")
 	}
 
 	body := text[idx+len(marker):]
-	slog.Debug("pdf body preview", "body", dateutil.Truncate(body, 500))
 
 	splits := dateRe.FindAllStringSubmatchIndex(body, -1)
 	if len(splits) == 0 {

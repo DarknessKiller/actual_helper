@@ -5,8 +5,6 @@ import (
 	"log/slog"
 	"regexp"
 	"strings"
-
-	"actual_helper/internal/dateutil"
 )
 
 var (
@@ -46,7 +44,7 @@ func extractAccountName(text string) string {
 func parseBlocks(text string) ([]RytReport, error) {
 	idx := strings.Index(text, "Account Transactions")
 	if idx == -1 {
-		slog.Warn("marker not found in text", "text_preview", dateutil.Truncate(text, 400))
+		slog.Warn("marker not found in text")
 		return nil, errors.New("no account transactions section found")
 	}
 
@@ -115,7 +113,7 @@ func parseBlocks(text string) ([]RytReport, error) {
 
 		report, err := parseBlock(block)
 		if err != nil {
-			slog.Info("pdf block skipped", "reason", err.Error(), "block", dateutil.Truncate(block, 200))
+			slog.Info("pdf block skipped", "reason", err.Error())
 			continue
 		}
 		reports = append(reports, report)

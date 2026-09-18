@@ -92,13 +92,13 @@ func (p *TNGProvider) toActualReports(ctx context.Context, logger *slog.Logger, 
 		}
 
 		if p.shouldSkip(report.Description) {
-			logger.DebugContext(ctx, "row skipped: filtered description", "description", report.Description)
+			logger.DebugContext(ctx, "row skipped: filtered description")
 			continue
 		}
 
 		parsedDate, err := parseDate(report.Date)
 		if err != nil {
-			logger.DebugContext(ctx, "row skipped: invalid date", "raw", report.Date)
+			logger.DebugContext(ctx, "row skipped: invalid date")
 			continue
 		}
 
@@ -106,7 +106,7 @@ func (p *TNGProvider) toActualReports(ctx context.Context, logger *slog.Logger, 
 
 		amount, err := parseAmount(report.Amount)
 		if err != nil || amount == 0 {
-			logger.DebugContext(ctx, "row skipped: invalid amount", "raw", report.Amount)
+			logger.DebugContext(ctx, "row skipped: invalid amount")
 			continue
 		}
 

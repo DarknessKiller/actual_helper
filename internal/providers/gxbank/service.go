@@ -77,13 +77,13 @@ func (p *GXBankProvider) toActualReports(ctx context.Context, logger *slog.Logge
 
 	for _, report := range reports {
 		if p.shouldSkip(report.Description) {
-			logger.DebugContext(ctx, "row skipped: filtered description", "description", report.Description)
+			logger.DebugContext(ctx, "row skipped: filtered description")
 			continue
 		}
 
 		parsedDate, err := parseDate(report.Date)
 		if err != nil {
-			logger.DebugContext(ctx, "row skipped: invalid date", "raw", report.Date)
+			logger.DebugContext(ctx, "row skipped: invalid date")
 			continue
 		}
 
@@ -93,7 +93,7 @@ func (p *GXBankProvider) toActualReports(ctx context.Context, logger *slog.Logge
 		amountStr = strings.ReplaceAll(amountStr, ",", "")
 		amount, err := strconv.ParseFloat(amountStr, 64)
 		if err != nil || amount == 0 {
-			logger.DebugContext(ctx, "row skipped: invalid amount", "raw", report.Amount)
+			logger.DebugContext(ctx, "row skipped: invalid amount")
 			continue
 		}
 

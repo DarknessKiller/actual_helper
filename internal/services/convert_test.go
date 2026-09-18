@@ -50,7 +50,7 @@ var _ = Describe("ConvertService", func() {
 
 	Describe("ConvertFile", func() {
 		It("returns error for unknown provider", func() {
-			_, err := svc.ConvertFile(ctx, "unknown", strings.NewReader(""), "", "", "")
+			_, err := svc.ConvertFile(ctx, "unknown", []byte(""), "", "")
 			Expect(err).To(MatchError(ContainSubstring(`provider "unknown" not found`)))
 		})
 
@@ -63,7 +63,7 @@ var _ = Describe("ConvertService", func() {
 			}
 			reg.Register(mock)
 
-			csvBytes, err := svc.ConvertFile(ctx, "test", strings.NewReader("a,b,c"), "test.csv", "text/csv", "")
+			csvBytes, err := svc.ConvertFile(ctx, "test", []byte("a,b,c"), "text/csv", "")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(csvBytes).NotTo(BeEmpty())
 
@@ -79,7 +79,7 @@ var _ = Describe("ConvertService", func() {
 			}
 			reg.Register(mock)
 
-			_, err := svc.ConvertFile(ctx, "test", strings.NewReader("%PDF-content"), "test.pdf", "application/pdf", "")
+			_, err := svc.ConvertFile(ctx, "test", []byte("%PDF-content"), "application/pdf", "")
 			Expect(err).To(HaveOccurred())
 		})
 
@@ -93,7 +93,7 @@ var _ = Describe("ConvertService", func() {
 			}
 			reg.Register(mock)
 
-			csvBytes, err := svc.ConvertFile(ctx, "test", strings.NewReader("a,b,c"), "test.csv", "text/csv", "")
+			csvBytes, err := svc.ConvertFile(ctx, "test", []byte("a,b,c"), "text/csv", "")
 			Expect(err).NotTo(HaveOccurred())
 
 			lines := strings.Split(strings.TrimSpace(string(csvBytes)), "\n")

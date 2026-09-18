@@ -4,13 +4,12 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io"
+	"image"
+	"image/png"
 	"log/slog"
-	"os"
 	"os/exec"
-	"path/filepath"
+	"regexp"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/ledongthuc/pdf"
@@ -30,12 +29,9 @@ const (
 	timeoutOCR       = 5 * time.Minute
 )
 
-func ExtractText(ctx context.Context, r io.Reader, password string, method ExtractionMethod) (string, error) {
-	data, err := io.ReadAll(r)
-	if err != nil {
-		return "", fmt.Errorf("read input: %w", err)
-	}
-
+// ExtractText extracts text from a transaction PDF entirely in memory.
+// No temporary files are written; external tools are driven via stdin/stdout.
+func ExtractText(ctx context.Context, data []byte, password string, method ExtractionMethod) (string, error) {
 	if password != "" {
 		var buf bytes.Buffer
 		conf := model.NewDefaultConfiguration()
@@ -43,8 +39,10 @@ func ExtractText(ctx context.Context, r io.Reader, password string, method Extra
 		if err := api.Decrypt(bytes.NewReader(data), &buf, conf); err != nil {
 			return "", fmt.Errorf("decrypt pdf: %w", err)
 		}
+		zero(data)
 		data = buf.Bytes()
 	}
+	defer zero(data)
 
 	switch method {
 	case ExtractionMethodDigital:
@@ -58,32 +56,31 @@ func ExtractText(ctx context.Context, r io.Reader, password string, method Extra
 	}
 }
 
-func extractDigital(ctx context.Context, data []byte) (string, error) {
-	tmpDir, err := os.MkdirTemp("", "pdfutil")
-	if err != nil {
-		return "", fmt.Errorf("create temp dir: %w", err)
+// zero clears b. Best effort: []byte buffers we own are wiped before they are
+// garbage collected, so freed pages do not retain statement data.
+func zero(b []byte) {
+	for i := range b {
+		b[i] = 0
 	}
-	defer os.RemoveAll(tmpDir)
+}
 
-	srcPath := filepath.Join(tmpDir, "input.pdf")
-	if err := os.WriteFile(srcPath, data, 0644); err != nil {
-		return "", fmt.Errorf("write temp pdf: %w", err)
-	}
+func extractDigital(ctx context.Context, data []byte) (string, error) {
+	ctx, cancel := context.WithTimeout(ctx, timeoutDigital)
+	defer cancel()
 
 	// ponytail: ledongthuc/pdf is pure Go, no subprocess to cancel.
-	// Wrap in timeout via goroutine since CGO-free lib can't use exec.CommandContext.
+	// Wrap in a goroutine so an expired context still returns.
 	type result struct {
 		text string
 		err  error
 	}
 	ch := make(chan result, 1)
 	go func() {
-		f, reader, err := pdf.Open(srcPath)
+		reader, err := pdf.NewReader(bytes.NewReader(data), int64(len(data)))
 		if err != nil {
 			ch <- result{err: fmt.Errorf("open pdf: %w", err)}
 			return
 		}
-		defer f.Close()
 
 		var text string
 		for i := 1; i <= reader.NumPage(); i++ {
@@ -110,28 +107,19 @@ func extractDigital(ctx context.Context, data []byte) (string, error) {
 }
 
 func extractWithPdftotext(ctx context.Context, data []byte) (string, error) {
-	tmpDir, err := os.MkdirTemp("", "pdftext")
-	if err != nil {
-		return "", fmt.Errorf("create temp dir: %w", err)
-	}
-	defer os.RemoveAll(tmpDir)
-
-	pdfPath := filepath.Join(tmpDir, "input.pdf")
-	if err := os.WriteFile(pdfPath, data, 0644); err != nil {
-		return "", fmt.Errorf("write temp pdf: %w", err)
-	}
-
 	ctx, cancel := context.WithTimeout(ctx, timeoutPdftotext)
 	defer cancel()
 
-	cmd := exec.CommandContext(ctx, "pdftotext", "-layout", pdfPath, "-")
-	var out bytes.Buffer
+	cmd := exec.CommandContext(ctx, "pdftotext", "-layout", "-", "-")
+	cmd.Stdin = bytes.NewReader(data)
+	var out, errOut bytes.Buffer
 	cmd.Stdout = &out
+	cmd.Stderr = &errOut
 	if err := cmd.Run(); err != nil {
 		if ctx.Err() != nil {
 			return "", fmt.Errorf("pdftotext timeout: %w", ctx.Err())
 		}
-		return "", fmt.Errorf("pdftotext failed: %w", err)
+		return "", fmt.Errorf("pdftotext failed: %w: %s", err, errOut.String())
 	}
 
 	return out.String(), nil
@@ -140,33 +128,18 @@ func extractWithPdftotext(ctx context.Context, data []byte) (string, error) {
 const maxStripHeight = 4000
 const stripOverlap = 200
 
+var pagesRe = regexp.MustCompile(`(?m)^Pages:\s+(\d+)`)
+
 func extractWithOCR(ctx context.Context, data []byte) (string, error) {
-	tmpDir, err := os.MkdirTemp("", "pdfocr")
-	if err != nil {
-		return "", fmt.Errorf("create temp dir: %w", err)
-	}
-	defer os.RemoveAll(tmpDir)
-
-	pdfPath := filepath.Join(tmpDir, "input.pdf")
-	if err := os.WriteFile(pdfPath, data, 0644); err != nil {
-		return "", fmt.Errorf("write temp pdf: %w", err)
-	}
-
 	ctx, cancel := context.WithTimeout(ctx, timeoutOCR)
 	defer cancel()
 
 	// Page count via pdfinfo (cheap, poppler) so we render one page at a time
 	// instead of all at once — keeps peak memory to a single page's PNG.
-	pageCount, err := pdfPageCount(ctx, pdfPath)
+	pageCount, err := pdfPageCount(ctx, data)
 	if err != nil {
 		return "", fmt.Errorf("get page count: %w", err)
 	}
-
-	client, err := newOCRClient()
-	if err != nil {
-		return "", err
-	}
-	defer client.Close()
 
 	var text string
 	for page := 1; page <= pageCount; page++ {
@@ -174,108 +147,117 @@ func extractWithOCR(ctx context.Context, data []byte) (string, error) {
 			return "", ctx.Err()
 		}
 
-		// Render only this page, OCR it, then delete it before the next —
-		// peak disk + memory is one page, not the whole document.
-		pagePath := filepath.Join(tmpDir, fmt.Sprintf("page-%d.png", page))
-		rcmd := exec.CommandContext(ctx, "pdftoppm", "-png", "-r", "150", "-f", strconv.Itoa(page), "-l", strconv.Itoa(page), pdfPath, filepath.Join(tmpDir, "page"))
-		if out, err := rcmd.CombinedOutput(); err != nil {
-			if ctx.Err() != nil {
-				return "", fmt.Errorf("pdftoppm timeout: %w", ctx.Err())
-			}
-			slog.Warn("pdftoppm page failed, skipping", "page", page, "error", err, "output", string(out))
-			continue
-		}
-
-		stripPaths, err := splitIntoStrips(ctx, pagePath)
+		// Render only this page. The PNG stays in memory and is dropped
+		// before the next page — peak memory is one page, not the document.
+		pagePNG, err := renderPagePNG(ctx, data, page)
 		if err != nil {
-			slog.Warn("failed to split page into strips, trying full page", "page", page, "error", err)
-			stripPaths = []string{pagePath}
-		}
-
-		for _, stripPath := range stripPaths {
 			if ctx.Err() != nil {
 				return "", ctx.Err()
 			}
-
-			pageText, err := ocrImage(ctx, client, stripPath)
-			if stripPath != pagePath {
-				os.Remove(stripPath)
-			}
-			if err != nil {
-				slog.Warn("ocr strip skipped", "path", stripPath, "error", err)
-				continue
-			}
-			slog.Debug("ocr strip extracted", "path", stripPath, "chars", len(pageText))
-			text += pageText + "\n"
+			slog.Warn("pdftocairo page failed, skipping", "page", page, "error", err)
+			continue
 		}
 
-		os.Remove(pagePath)
+		pageText, err := ocrPNG(ctx, pagePNG)
+		if err != nil {
+			slog.Warn("ocr page skipped", "page", page, "error", err)
+			continue
+		}
+		slog.Debug("ocr page extracted", "page", page, "chars", len(pageText))
+		text += pageText + "\n"
 	}
 
 	return text, nil
 }
 
-func splitIntoStrips(ctx context.Context, path string) ([]string, error) {
-	cmd := exec.CommandContext(ctx, "identify", "-format", "%h", path)
-	var out bytes.Buffer
-	cmd.Stdout = &out
-	if err := cmd.Run(); err != nil {
-		return nil, fmt.Errorf("identify failed: %w", err)
-	}
-
-	var height int
-	if _, err := fmt.Sscanf(out.String(), "%d", &height); err != nil {
-		return nil, fmt.Errorf("parse height: %w", err)
-	}
-
-	if height <= maxStripHeight {
-		return []string{path}, nil
-	}
-
-	var strips []string
-	for y := 0; y < height; {
-		if ctx.Err() != nil {
-			return strips, ctx.Err()
-		}
-
-		stripH := maxStripHeight
-		if y+stripH > height {
-			stripH = height - y
-		}
-
-		stripPath := fmt.Sprintf("%s.strip.%d.png", path, len(strips))
-		crop := exec.CommandContext(ctx, "convert", path, "-crop", fmt.Sprintf("%dx%d+0+%d", 0, stripH, y), "+repage", stripPath)
-		if out, err := crop.CombinedOutput(); err != nil {
-			return nil, fmt.Errorf("convert crop failed: %w\n%s", err, string(out))
-		}
-		strips = append(strips, stripPath)
-
-		y += stripH - stripOverlap
-		if y >= height {
-			break
-		}
-	}
-
-	return strips, nil
-}
-
 // pdfPageCount returns the number of pages in a PDF via the pdfinfo CLI
-// (poppler-utils, present in the Docker runtime image).
-func pdfPageCount(ctx context.Context, pdfPath string) (int, error) {
-	var out bytes.Buffer
-	cmd := exec.CommandContext(ctx, "pdfinfo", pdfPath)
-	cmd.Stdout = &out
-	if err := cmd.Run(); err != nil {
+// (poppler-utils, present in the Docker runtime image), reading the PDF from stdin.
+func pdfPageCount(ctx context.Context, data []byte) (int, error) {
+	cmd := exec.CommandContext(ctx, "pdfinfo", "-")
+	cmd.Stdin = bytes.NewReader(data)
+	out, err := cmd.Output()
+	if err != nil {
 		return 0, fmt.Errorf("pdfinfo: %w", err)
 	}
-	for _, line := range strings.Split(out.String(), "\n") {
-		if strings.HasPrefix(line, "Pages:") {
-			n, err := strconv.Atoi(strings.TrimSpace(strings.TrimPrefix(line, "Pages:")))
-			if err != nil {
-				return 0, fmt.Errorf("parse page count: %w", err)
-			}
-			return n, nil
-		}
+
+	match := pagesRe.FindSubmatch(out)
+	if match == nil {
+		return 0, fmt.Errorf("page count not found in pdfinfo output")
 	}
-	return 0, fmt.Errorf("page count not found in pdfinfo output")
+
+	return strconv.Atoi(string(match[1]))
+}
+
+// renderPagePNG renders one page with pdftocairo, reading the PDF from stdin
+// and writing the PNG to stdout (pdftoppm cannot write to stdout; pdftocairo can).
+func renderPagePNG(ctx context.Context, data []byte, page int) ([]byte, error) {
+	cmd := exec.CommandContext(ctx, "pdftocairo", "-png", "-r", "200",
+		"-f", strconv.Itoa(page), "-l", strconv.Itoa(page), "-singlefile",
+		"-", "-")
+	cmd.Stdin = bytes.NewReader(data)
+	var out, errOut bytes.Buffer
+	cmd.Stdout = &out
+	cmd.Stderr = &errOut
+	if err := cmd.Run(); err != nil {
+		return nil, fmt.Errorf("pdftocairo: %w: %s", err, errOut.String())
+	}
+	if out.Len() == 0 {
+		return nil, fmt.Errorf("pdftocairo produced no image")
+	}
+
+	return out.Bytes(), nil
+}
+
+// ocrPNG OCRs one page image, splitting pages taller than maxStripHeight into
+// overlapping strips first. Strips are cropped in Go (stdlib image/png), so no
+// ImageMagick and no temp files.
+func ocrPNG(ctx context.Context, pagePNG []byte) (string, error) {
+	img, err := png.Decode(bytes.NewReader(pagePNG))
+	if err != nil {
+		return "", fmt.Errorf("decode page image: %w", err)
+	}
+
+	bounds := img.Bounds()
+	if bounds.Dy() <= maxStripHeight {
+		return ocrImage(ctx, pagePNG)
+	}
+
+	sub, ok := img.(interface {
+		SubImage(r image.Rectangle) image.Image
+	})
+	if !ok {
+		return "", fmt.Errorf("decode page image: unsupported image type %T", img)
+	}
+
+	var text string
+	for y := bounds.Min.Y; y < bounds.Max.Y; {
+		if ctx.Err() != nil {
+			return text, ctx.Err()
+		}
+
+		stripHeight := maxStripHeight
+		if y+stripHeight > bounds.Max.Y {
+			stripHeight = bounds.Max.Y - y
+		}
+
+		strip := sub.SubImage(image.Rect(bounds.Min.X, y, bounds.Max.X, y+stripHeight))
+		var buf bytes.Buffer
+		if err := png.Encode(&buf, strip); err != nil {
+			return "", fmt.Errorf("encode strip: %w", err)
+		}
+
+		stripText, err := ocrImage(ctx, buf.Bytes())
+		if err != nil {
+			slog.Warn("ocr strip skipped", "error", err)
+		} else {
+			text += stripText + "\n"
+		}
+
+		if y+stripHeight >= bounds.Max.Y {
+			break
+		}
+		y += maxStripHeight - stripOverlap
+	}
+
+	return text, nil
 }

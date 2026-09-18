@@ -31,9 +31,7 @@ var skipPatterns = []string{
 func parseTransactions(text string) ([]UOBReport, error) {
 	stmtDateStr := extractStatementDate(text)
 	if stmtDateStr == "" {
-		slog.Warn("statement date not found in UOB text",
-			"text_preview", dateutil.Truncate(text, 400),
-		)
+		slog.Warn("statement date not found in UOB text")
 		return nil, errors.New("statement date not found")
 	}
 
@@ -42,7 +40,7 @@ func parseTransactions(text string) ([]UOBReport, error) {
 		// Try 2-digit year fallback
 		stmtDate, err = time.Parse("02 Jan 06", stmtDateStr)
 		if err != nil {
-			slog.Warn("invalid statement date format", "raw", stmtDateStr)
+			slog.Warn("invalid statement date format")
 			return nil, errors.New("invalid statement date")
 		}
 	}

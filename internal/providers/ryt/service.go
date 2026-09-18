@@ -87,12 +87,12 @@ func (p *RytProvider) toActualReports(ctx context.Context, logger *slog.Logger, 
 
 	for _, report := range reports {
 		if strings.Contains(strings.ToLower(report.Description), "opening balance") {
-			logger.DebugContext(ctx, "row skipped: opening balance", "description", report.Description)
+			logger.DebugContext(ctx, "row skipped: opening balance")
 			continue
 		}
 
 		if p.shouldSkip(report.Description) {
-			logger.DebugContext(ctx, "row skipped: filtered description", "description", report.Description)
+			logger.DebugContext(ctx, "row skipped: filtered description")
 			continue
 		}
 
@@ -101,7 +101,7 @@ func (p *RytProvider) toActualReports(ctx context.Context, logger *slog.Logger, 
 			// Try abbreviated month format
 			parsedDate, err = time.Parse("2 Jan 2006", report.Date)
 			if err != nil {
-				logger.DebugContext(ctx, "row skipped: invalid date", "raw", report.Date)
+				logger.DebugContext(ctx, "row skipped: invalid date")
 				continue
 			}
 		}
@@ -111,7 +111,7 @@ func (p *RytProvider) toActualReports(ctx context.Context, logger *slog.Logger, 
 		amountStr := strings.ReplaceAll(report.Amount, ",", "")
 		amount, err := strconv.ParseFloat(amountStr, 64)
 		if err != nil || amount == 0 {
-			logger.DebugContext(ctx, "row skipped: invalid amount", "raw", report.Amount)
+			logger.DebugContext(ctx, "row skipped: invalid amount")
 			continue
 		}
 
