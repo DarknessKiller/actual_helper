@@ -73,7 +73,7 @@ func (p *HLBProvider) parseCreditPDF(ctx context.Context, logger *slog.Logger, t
 		return nil, err
 	}
 
-	logger.InfoContext(ctx, "pdf parsing started", "transactions", len(reports), "account", accountName, "type", "credit")
+	logger.InfoContext(ctx, "pdf parsing started", "transactions", len(reports), "account", models.MaskAccountNumber(accountName), "type", "credit")
 
 	result := p.toActualReports(ctx, logger, reports, accountName)
 	logger.InfoContext(ctx, "pdf parsing complete", "parsed_count", len(result))
@@ -91,7 +91,7 @@ func (p *HLBProvider) parseDebitPDF(ctx context.Context, logger *slog.Logger, te
 		return nil, err
 	}
 
-	logger.InfoContext(ctx, "pdf parsing started", "transactions", len(reports), "account", accountName, "type", "debit")
+	logger.InfoContext(ctx, "pdf parsing started", "transactions", len(reports), "account", models.MaskAccountNumber(accountName), "type", "debit")
 
 	result := p.toActualReports(ctx, logger, reports, accountName)
 	logger.InfoContext(ctx, "pdf parsing complete", "parsed_count", len(result))

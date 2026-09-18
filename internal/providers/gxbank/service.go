@@ -54,7 +54,7 @@ func (p *GXBankProvider) ParsePDFText(ctx context.Context, text string) ([]model
 		return nil, err
 	}
 
-	logger.InfoContext(ctx, "pdf parsing started", "transactions", len(reports), "account", accountName)
+	logger.InfoContext(ctx, "pdf parsing started", "transactions", len(reports), "account", models.MaskAccountNumber(accountName))
 
 	result := p.toActualReports(ctx, logger, reports, accountName)
 	logger.InfoContext(ctx, "pdf parsing complete", "parsed_count", len(result))

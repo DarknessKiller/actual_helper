@@ -63,7 +63,7 @@ func (p *RytProvider) ParsePDFText(ctx context.Context, text string) ([]models.A
 		return nil, err
 	}
 
-	logger.InfoContext(ctx, "pdf parsing started", "blocks", len(reports), "account", accountName)
+	logger.InfoContext(ctx, "pdf parsing started", "blocks", len(reports), "account", models.MaskAccountNumber(accountName))
 
 	result := p.toActualReports(ctx, logger, reports, accountName)
 	logger.InfoContext(ctx, "pdf parsing complete", "parsed_count", len(result))
