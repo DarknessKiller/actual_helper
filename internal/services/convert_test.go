@@ -134,6 +134,17 @@ var _ = Describe("ConvertService", func() {
 			Expect(lines[1]).To(Equal("Savings,2026-06-15,Alice,Birthday gift,Income,Gifts,200.00,,true"))
 		})
 
+		It("keeps account numbers unmasked in the output", func() {
+			reports := []models.ActualBudgetReport{
+				{Account: "1234 5678 9012 3456", Date: "2026-01-01", Amount: "-10.00"},
+			}
+			data, err := services.ToActualCSV(reports)
+			Expect(err).NotTo(HaveOccurred())
+
+			lines := strings.Split(strings.TrimSpace(string(data)), "\n")
+			Expect(lines[1]).To(ContainSubstring("1234 5678 9012 3456"))
+		})
+
 		It("handles empty report list", func() {
 			data, err := services.ToActualCSV([]models.ActualBudgetReport{})
 			Expect(err).NotTo(HaveOccurred())
