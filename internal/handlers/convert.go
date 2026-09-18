@@ -1,8 +1,11 @@
 package handlers
 
 import (
+	"errors"
 	"fmt"
+	"io"
 	"log/slog"
+	"net/http"
 	"time"
 
 	"actual_helper/internal/services"
@@ -27,31 +30,95 @@ func NewConvertHandler(convertService *services.ConvertService) *ConvertHandler 
 	return &ConvertHandler{convertService: convertService}
 }
 
+// maxUploadBytes caps the in-memory upload buffer. Uploads are never written to disk.
+const maxUploadBytes int64 = 32 << 20
+
+const maxPasswordBytes = 4 << 10
+
+var (
+	errFileRequired = errors.New("file required")
+	errFileTooLarge = errors.New("file too large for in-memory processing")
+)
+
+type uploadedFile struct {
+	data        []byte
+	contentType string
+	password    string
+}
+
+// parseUpload reads a multipart request into memory, capped at limit bytes.
+// Unlike Request.FormFile it never spools parts to temp files.
+func parseUpload(r *http.Request, limit int64) (*uploadedFile, error) {
+	reader, err := r.MultipartReader()
+	if err != nil {
+		return nil, err
+	}
+
+	upload := &uploadedFile{}
+	for {
+		part, err := reader.NextPart()
+		if errors.Is(err, io.EOF) {
+			break
+		}
+		if err != nil {
+			return nil, err
+		}
+
+		switch part.FormName() {
+		case "file":
+			upload.contentType = part.Header.Get("Content-Type")
+			data, err := io.ReadAll(io.LimitReader(part, limit+1))
+			part.Close()
+			if err != nil {
+				return nil, err
+			}
+			if int64(len(data)) > limit {
+				return nil, errFileTooLarge
+			}
+			zero(upload.data) // discard any earlier file part
+			upload.data = data
+		case "password":
+			password, err := io.ReadAll(io.LimitReader(part, maxPasswordBytes))
+			part.Close()
+			if err != nil {
+				return nil, err
+			}
+			upload.password = string(password)
+		default:
+			part.Close()
+		}
+	}
+
+	if upload.data == nil {
+		return nil, errFileRequired
+	}
+
+	return upload, nil
+}
+
 func (handler *ConvertHandler) Convert(c fuego.ContextWithBody[ConvertRequestBody]) (any, error) {
 	providerName := c.PathParam("provider")
 
-	file, header, err := c.Request().FormFile("file")
+	upload, err := parseUpload(c.Request(), maxUploadBytes)
 	if err != nil {
+		if errors.Is(err, errFileTooLarge) {
+			return nil, fuego.HTTPError{
+				Status: http.StatusRequestEntityTooLarge,
+				Title:  "File too large",
+				Detail: fmt.Sprintf("file exceeds the %d MiB in-memory limit", maxUploadBytes>>20),
+			}
+		}
 		return nil, fuego.BadRequestError{Title: "File required", Detail: err.Error()}
 	}
-	defer file.Close()
+	defer zero(upload.data)
 
-	c.Request().Header.Set("Content-Type", "multipart/form-data")
+	slog.Info("request received", "provider", providerName, "size", len(upload.data))
 
-	body, err := c.Body()
-	if err != nil {
-		return nil, fuego.BadRequestError{Title: "Invalid form", Detail: err.Error()}
-	}
-
-	filename := header.Filename
-	contentType := header.Header.Get("Content-Type")
-
-	slog.Info("request received", "provider", providerName, "filename", filename, "size", header.Size)
-
-	csvBytes, err := handler.convertService.ConvertFile(c.Context(), providerName, file, filename, contentType, body.Password)
+	csvBytes, err := handler.convertService.ConvertFile(c.Context(), providerName, upload.data, upload.contentType, upload.password)
 	if err != nil {
 		return nil, fuego.InternalServerError{Title: "Conversion failed", Detail: err.Error()}
 	}
+	defer zero(csvBytes)
 
 	currentTime := time.Now()
 	fileName := fmt.Sprintf("%s_actual_budget_%s.csv", providerName, currentTime.Local().Format("2006-01-02_150405"))
@@ -62,6 +129,13 @@ func (handler *ConvertHandler) Convert(c fuego.ContextWithBody[ConvertRequestBod
 
 	slog.Info("response sent", "provider", providerName, "bytes", len(csvBytes))
 	return nil, nil
+}
+
+// zero clears b so statement data does not linger in freed heap pages.
+func zero(b []byte) {
+	for i := range b {
+		b[i] = 0
+	}
 }
 
 func RegisterConvertRoutes(server *fuego.Server, convertHandler *ConvertHandler) {

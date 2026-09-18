@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io"
 	"log/slog"
 	"strings"
 
@@ -23,8 +22,9 @@ func NewConvertService(registry *providers.Registry, loader *config.Loader) *Con
 	return &ConvertService{registry: registry, loader: loader}
 }
 
-func (service *ConvertService) ConvertFile(ctx context.Context, providerName string, file io.Reader, filename, contentType, password string) ([]byte, error) {
-	logger := slog.With("provider", providerName, "filename", filename)
+// ConvertFile converts file bytes, which stay in memory for the whole request.
+func (service *ConvertService) ConvertFile(ctx context.Context, providerName string, file []byte, contentType, password string) ([]byte, error) {
+	logger := slog.With("provider", providerName)
 
 	provider, ok := service.registry.Get(providerName)
 	if !ok {
@@ -38,11 +38,12 @@ func (service *ConvertService) ConvertFile(ctx context.Context, providerName str
 	service.reloadProvider(providerName, provider)
 
 	var reports []models.ActualBudgetReport
+	var err error
 
 	switch {
 	case strings.Contains(contentType, "pdf"):
 		var text string
-		text, err := pdfutil.ExtractText(ctx, file, password, provider.ExtractionMethod())
+		text, err = pdfutil.ExtractText(ctx, file, password, provider.ExtractionMethod())
 		if err != nil {
 			return nil, fmt.Errorf("pdf extraction: %w", err)
 		}
@@ -51,13 +52,8 @@ func (service *ConvertService) ConvertFile(ctx context.Context, providerName str
 			return nil, fmt.Errorf("pdf parsing: %w", err)
 		}
 	case strings.Contains(contentType, "csv"):
-		var data []byte
-		data, err := io.ReadAll(file)
-		if err != nil {
-			return nil, fmt.Errorf("csv read: %w", err)
-		}
-		logger.InfoContext(ctx, "file parsing started", "size_bytes", len(data))
-		reports, err = provider.ParseCSV(ctx, bytes.NewReader(data))
+		logger.InfoContext(ctx, "file parsing started", "size_bytes", len(file))
+		reports, err = provider.ParseCSV(ctx, bytes.NewReader(file))
 		if err != nil {
 			return nil, fmt.Errorf("csv parsing: %w", err)
 		}

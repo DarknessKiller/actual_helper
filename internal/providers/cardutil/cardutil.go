@@ -4,8 +4,6 @@ import (
 	"log/slog"
 	"regexp"
 	"strings"
-
-	"actual_helper/internal/dateutil"
 )
 
 // WhitespaceRe matches one or more whitespace characters.
@@ -19,7 +17,7 @@ var CardNumberRe = regexp.MustCompile(`(\d{4}[\s-]*\d{4}[\s-]*\d{4}[\s-]*\d{4})`
 func ExtractAfterMarker(text, marker, fallback string) string {
 	idx := strings.Index(text, marker)
 	if idx == -1 {
-		slog.Debug("card number marker not found", "marker", marker, "preview", dateutil.Truncate(text, 600))
+		slog.Debug("card number marker not found", "marker", marker)
 		return fallback
 	}
 
@@ -31,7 +29,7 @@ func ExtractAfterMarker(text, marker, fallback string) string {
 		return matches
 	}
 
-	slog.Debug("card number not found after marker", "marker", marker, "preview", dateutil.Truncate(after, 600))
+	slog.Debug("card number not found after marker", "marker", marker)
 	return fallback
 }
 

@@ -42,11 +42,3 @@ func FormatDate(ddmmm string, stmtDate time.Time) (string, error) {
 	t := time.Date(year, monthNum, day, 0, 0, 0, 0, time.UTC)
 	return t.Format("2006-01-02"), nil
 }
-
-// Truncate truncates string s to n characters, appending "..." if truncated.
-func Truncate(s string, n int) string {
-	if len(s) <= n {
-		return s
-	}
-	return s[:n] + "..."
-}

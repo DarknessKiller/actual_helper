@@ -1,6 +1,7 @@
 !test_input.csv
 *.pdf
 *.csv
+!**/testdata/*.pdf
 
 __debug_bin*
 doc/openapi.json

@@ -8,20 +8,14 @@ import (
 	"strings"
 )
 
-// ocrClient wraps the tesseract CLI subprocess. Unlike the CGO gosseract
+// ocrImage runs the tesseract CLI subprocess. Unlike the CGO gosseract
 // binding, a subprocess is cleanly killable via context cancellation — no
-// leaked C memory, no thread-safety hazards, no goroutine races.
-type ocrClient struct{}
-
-func newOCRClient() (*ocrClient, error) {
-	return &ocrClient{}, nil
-}
-
-func (c *ocrClient) Close() error { return nil }
-
-func ocrImage(ctx context.Context, _ *ocrClient, path string) (string, error) {
+// leaked C memory, no thread-safety hazards, no goroutine races. The image
+// arrives on stdin and text leaves on stdout, so nothing touches disk.
+func ocrImage(ctx context.Context, imageData []byte) (string, error) {
 	var stdout, stderr bytes.Buffer
-	cmd := exec.CommandContext(ctx, "tesseract", path, "stdout", "-l", "eng+msa")
+	cmd := exec.CommandContext(ctx, "tesseract", "stdin", "stdout", "-l", "eng+msa")
+	cmd.Stdin = bytes.NewReader(imageData)
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {

@@ -13,6 +13,7 @@ A Go web server that converts bank and fintech transaction files into [Actual Bu
 - **Auto-categorization** — case-insensitive keyword matching with global and per-provider category rules; first match wins
 - **Account name mapping** — maps provider-specific account names to Actual Budget account names
 - **Single output format** — clean CSV with standard Actual Budget columns
+- **RAM-only processing** — uploads, PDF renders, and output CSVs never touch disk; no temp files, no statement data in logs. Uploads are capped at 32 MiB
 
 ---
 
@@ -156,6 +157,7 @@ Converts a transaction file from the specified provider into Actual Budget CSV f
 | Status | Body |
 |---|---|
 | `400` | Missing file in request |
+| `413` | File exceeds the 32 MiB in-memory limit |
 | `500` | Unknown provider or processing error |
 
 ### GET /config

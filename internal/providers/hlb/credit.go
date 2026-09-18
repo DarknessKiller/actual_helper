@@ -34,15 +34,13 @@ func parseCreditTransactions(text string) ([]HLBReport, error) {
 		}
 	}
 	if stmtDateStr == "" {
-		slog.Warn("statement date not found in HLB text",
-			"text_preview", dateutil.Truncate(text, 400),
-		)
+		slog.Warn("statement date not found in HLB text")
 		return nil, errors.New("statement date not found")
 	}
 
 	stmtDate, err := time.Parse("02 Jan 2006", stmtDateStr)
 	if err != nil {
-		slog.Warn("invalid statement date format", "raw", stmtDateStr)
+		slog.Warn("invalid statement date format")
 		return nil, errors.New("invalid statement date")
 	}
 

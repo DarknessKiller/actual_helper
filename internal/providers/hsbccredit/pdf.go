@@ -31,15 +31,13 @@ func parseTransactions(text string) ([]HSBCReport, error) {
 
 	stmtDateStr := extractStatementDate(lines)
 	if stmtDateStr == "" {
-		slog.Warn("statement date not found in text",
-			"text_preview", dateutil.Truncate(text, 400),
-		)
+		slog.Warn("statement date not found in text")
 		return nil, errors.New("statement date not found")
 	}
 
 	stmtDate, err := time.Parse("02 Jan 2006", stmtDateStr)
 	if err != nil {
-		slog.Warn("invalid statement date format", "raw", stmtDateStr)
+		slog.Warn("invalid statement date format")
 		return nil, errors.New("invalid statement date")
 	}
 

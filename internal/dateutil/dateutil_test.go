@@ -55,25 +55,3 @@ var _ = Describe("FormatDate", func() {
 		Expect(err).To(HaveOccurred())
 	})
 })
-
-var _ = Describe("Truncate", func() {
-	It("returns original string if shorter than limit", func() {
-		result := dateutil.Truncate("hello", 10)
-		Expect(result).To(Equal("hello"))
-	})
-
-	It("returns original string if equal to limit", func() {
-		result := dateutil.Truncate("hello", 5)
-		Expect(result).To(Equal("hello"))
-	})
-
-	It("truncates and adds ellipsis if longer than limit", func() {
-		result := dateutil.Truncate("hello world", 5)
-		Expect(result).To(Equal("hello..."))
-	})
-
-	It("handles empty string", func() {
-		result := dateutil.Truncate("", 5)
-		Expect(result).To(Equal(""))
-	})
-})

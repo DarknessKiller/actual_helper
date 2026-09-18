@@ -1,7 +1,6 @@
 package pdfutil_test
 
 import (
-	"bytes"
 	"context"
 	"testing"
 	"time"
@@ -16,7 +15,7 @@ func TestExtractText_ContextTimeout(t *testing.T) {
 	defer cancel()
 	time.Sleep(1 * time.Millisecond)
 
-	_, err := pdfutil.ExtractText(ctx, bytes.NewReader(fakePDF), "", pdfutil.ExtractionMethodDigital)
+	_, err := pdfutil.ExtractText(ctx, fakePDF, "", pdfutil.ExtractionMethodDigital)
 	if err == nil {
 		t.Fatal("expected error from expired context")
 	}
