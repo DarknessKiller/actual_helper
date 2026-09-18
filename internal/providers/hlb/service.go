@@ -110,7 +110,7 @@ func (p *HLBProvider) toActualReports(ctx context.Context, logger *slog.Logger, 
 
 	for _, report := range reports {
 		if p.shouldSkip(report.Description) {
-			logger.DebugContext(ctx, "row skipped: filtered description", "description", report.Description)
+			logger.DebugContext(ctx, "row skipped: filtered description")
 			continue
 		}
 
@@ -119,7 +119,7 @@ func (p *HLBProvider) toActualReports(ctx context.Context, logger *slog.Logger, 
 		amountStr := strings.ReplaceAll(report.Amount, ",", "")
 		amount, err := strconv.ParseFloat(amountStr, 64)
 		if err != nil || amount == 0 {
-			logger.DebugContext(ctx, "row skipped: invalid amount", "raw", report.Amount)
+			logger.DebugContext(ctx, "row skipped: invalid amount")
 			continue
 		}
 
