@@ -44,6 +44,7 @@
 
   --ah-field-bg: rgba(255, 255, 255, 0.8);
   --ah-field-border: rgba(0, 0, 0, 0.12);
+  --ah-field-solid: #ffffff;
   --ah-accent-tint: rgba(194, 84, 10, 0.1);
   --ah-accent-border: rgba(194, 84, 10, 0.45);
   --ah-accent-soft: rgba(194, 84, 10, 0.06);
@@ -80,6 +81,7 @@
 
   --ah-field-bg: rgba(255, 255, 255, 0.08);
   --ah-field-border: rgba(255, 255, 255, 0.2);
+  --ah-field-solid: #28282a;
   --ah-accent-tint: rgba(224, 138, 46, 0.16);
   --ah-accent-border: rgba(224, 138, 46, 0.55);
   --ah-accent-soft: rgba(224, 138, 46, 0.12);
@@ -116,6 +118,7 @@
 
   --ah-field-bg: rgba(255, 255, 255, 0.07);
   --ah-field-border: rgba(255, 255, 255, 0.22);
+  --ah-field-solid: #121214;
   --ah-accent-tint: rgba(240, 160, 75, 0.18);
   --ah-accent-border: rgba(240, 160, 75, 0.62);
   --ah-accent-soft: rgba(240, 160, 75, 0.14);
@@ -264,6 +267,12 @@ body {
   box-shadow: 0 0 0 4px var(--ah-accent-soft);
 }
 .select-apple:disabled, .input-apple:disabled { opacity: 0.5; }
+
+/* Native <select> popup: Blink takes the list's background from the select's
+   background-color ONLY when it is fully opaque, otherwise it falls back to
+   white while still using the select's text color (white-on-white in dark). */
+.select-apple { background-color: var(--ah-field-solid); }
+.select-apple option { background-color: var(--ah-field-solid); color: var(--color-ink); }
 
 /* Field label */
 .field-label {
