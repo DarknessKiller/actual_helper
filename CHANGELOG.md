@@ -6,6 +6,13 @@ Releases before 0.8.0 are documented in [GitHub Releases](https://github.com/Dar
 
 ## [Unreleased]
 
+## [0.8.1] - 2026-09-25
+
+### Fixed
+
+- Web UI: the provider dropdown was unreadable on Linux Chromium — the popup list rendered white text on white in the dark and amoled themes ([#20]).
+  - Blink only uses a `<select>`'s own `background-color` for the popup list when it is fully opaque; the field background was translucent, so it fell back to a white list while keeping the select's near-white text color.
+  - The select now uses an opaque per-theme background; macOS and Windows were never affected.
 ## [0.8.0] - 2026-09-19
 
 Supersedes `v0.8.0-rc1`.
@@ -33,8 +40,10 @@ Supersedes `v0.8.0-rc1`.
 
 - Go module dependencies updated to the latest versions ([7cd8712]).
 
-[Unreleased]: https://github.com/DarknessKiller/actual_helper/compare/v0.8.0...HEAD
+[Unreleased]: https://github.com/DarknessKiller/actual_helper/compare/v0.8.1...HEAD
+[0.8.1]: https://github.com/DarknessKiller/actual_helper/compare/v0.8.0...v0.8.1
 [0.8.0]: https://github.com/DarknessKiller/actual_helper/compare/v0.7.7...v0.8.0
 [#18]: https://github.com/DarknessKiller/actual_helper/pull/18
 [#19]: https://github.com/DarknessKiller/actual_helper/pull/19
+[#20]: https://github.com/DarknessKiller/actual_helper/pull/20
 [7cd8712]: https://github.com/DarknessKiller/actual_helper/commit/7cd8712
