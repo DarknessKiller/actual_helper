@@ -39,6 +39,5 @@ export async function unloadConfig(): Promise<boolean> {
   if (!res.ok) {
     throw new Error(await res.text().catch(() => 'Unload failed'))
   }
-  const data = await res.json()
-  return Boolean(data.cleared)
+  return true
 }

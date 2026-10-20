@@ -5,6 +5,7 @@ import (
 	"io/fs"
 	"net/http"
 	"os"
+	"path"
 	"path/filepath"
 
 	"actual_helper/internal/config"
@@ -33,7 +34,7 @@ func spaHandler(distFS fs.FS, devDir string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// For non-root paths, check if the file exists first
 		if r.URL.Path != "/" {
-			clean := r.URL.Path[1:]
+			clean := path.Clean("/" + r.URL.Path)[1:]
 			exists := fileOnDisk(distFS, devDir, clean)
 			if !exists {
 				r.URL.Path = "/"

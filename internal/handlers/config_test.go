@@ -1,9 +1,7 @@
 package handlers_test
 
 import (
-	"context"
 	"encoding/json"
-	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -11,65 +9,40 @@ import (
 
 	"actual_helper/internal/config"
 	"actual_helper/internal/handlers"
-	"actual_helper/internal/models"
-	"actual_helper/internal/pdfutil"
-	"actual_helper/internal/providers"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
-// configurableMock is a fake Provider that records ConfigurableProvider.Reload
-// calls so config lifecycle tests can assert applied tuning. All data is fake.
-type configurableMock struct {
-	name        string
-	lastReload  reloadCall
-	reloadCount int
-}
-
-type reloadCall struct {
-	excludeKeywords []string
-	includeKeywords []string
-	categories      []models.CategoryRule
-	accountMappings map[string]string
-}
-
-func (m *configurableMock) Name() string { return m.name }
-func (m *configurableMock) ParseCSV(context.Context, io.Reader) ([]models.ActualBudgetReport, error) {
-	return nil, nil
-}
-func (m *configurableMock) ParsePDFText(context.Context, string) ([]models.ActualBudgetReport, error) {
-	return nil, nil
-}
-func (m *configurableMock) ExtractionMethod() pdfutil.ExtractionMethod {
-	return pdfutil.ExtractionMethodDigital
-}
-func (m *configurableMock) Reload(excludeKeywords, includeKeywords []string, categories []models.CategoryRule, accountMappings map[string]string) {
-	m.lastReload = reloadCall{
-		excludeKeywords: excludeKeywords,
-		includeKeywords: includeKeywords,
-		categories:      categories,
-		accountMappings: accountMappings,
-	}
-	m.reloadCount++
-}
-
-func newConfigServer(env config.Env, registry *providers.Registry, loader *config.Loader) (http.Handler, *handlers.ConfigHandler) {
+func newConfigServer(env config.Env, loader *config.Loader) http.Handler {
 	mux := http.NewServeMux()
-	handler := handlers.NewConfigHandler(loader, registry, env)
+	handler := handlers.NewConfigHandler(loader, env)
 	handlers.RegisterConfigRoutes(mux, handler)
-	return mux, handler
+	return mux
 }
+
+// sessionConfigBody is fake tuning; names never reference real data.
+var sessionConfigBody = `{
+	"global": {"exclude_keywords": ["Session Noise"]},
+	"providers": {"tng": {"exclude_keywords": ["Session TNG Noise"]}}
+}`
 
 var _ = Describe("ConfigHandler", func() {
+	var loader *config.Loader
+	var mux http.Handler
+
+	BeforeEach(func() {
+		loader = config.NewLoader()
+		mux = newConfigServer(config.Env{}, loader)
+	})
+
 	Describe("GET /config", func() {
 		It("serves the sample config file with application/json", func() {
 			path := filepath.Join(GinkgoT().TempDir(), "provider_config.example.json")
 			Expect(os.WriteFile(path, []byte(`{"global":{"exclude_keywords":["Sample"]}}`), 0644)).To(Succeed())
 
 			env := config.Env{ProviderConfigPath: path}
-			loader := config.NewLoader()
-			mux, _ := newConfigServer(env, providers.NewRegistry(), loader)
+			mux = newConfigServer(env, loader)
 
 			req := httptest.NewRequest(http.MethodGet, "/config", nil)
 			w := httptest.NewRecorder()
@@ -81,8 +54,7 @@ var _ = Describe("ConfigHandler", func() {
 		})
 
 		It("returns 404 when the sample path is empty", func() {
-			env := config.Env{}
-			mux, _ := newConfigServer(env, providers.NewRegistry(), config.NewLoader())
+			mux = newConfigServer(config.Env{}, loader)
 
 			req := httptest.NewRequest(http.MethodGet, "/config", nil)
 			w := httptest.NewRecorder()
@@ -93,7 +65,7 @@ var _ = Describe("ConfigHandler", func() {
 
 		It("returns 404 when the sample file is unreadable", func() {
 			env := config.Env{ProviderConfigPath: filepath.Join(GinkgoT().TempDir(), "missing.json")}
-			mux, _ := newConfigServer(env, providers.NewRegistry(), config.NewLoader())
+			mux = newConfigServer(env, loader)
 
 			req := httptest.NewRequest(http.MethodGet, "/config", nil)
 			w := httptest.NewRecorder()
@@ -104,98 +76,88 @@ var _ = Describe("ConfigHandler", func() {
 	})
 
 	Describe("POST /config", func() {
-		It("applies merged tuning to every configurable provider", func() {
-			tng := &configurableMock{name: "tng"}
-			registry := providers.NewRegistry()
-			registry.Register(tng)
-
-			loader := config.NewLoader()
-			mux, _ := newConfigServer(config.Env{}, registry, loader)
-
-			body := `{
-				"global": {"exclude_keywords": ["Global Noise"]},
-				"providers": {"tng": {"exclude_keywords": ["TNG Fee"], "account_mappings": {"": "TNG"}}}
-			}`
-			req := httptest.NewRequest(http.MethodPost, "/config", stringReader(body))
+		It("stores the rules under a fresh session cookie", func() {
+			req := httptest.NewRequest(http.MethodPost, "/config", stringReader(sessionConfigBody))
 			req.Header.Set("Content-Type", "application/json")
-			w := httptest.NewRecorder()
-			mux.ServeHTTP(w, req)
-
-			Expect(w.Code).To(Equal(http.StatusOK))
-			var resp map[string][]string
-			Expect(json.NewDecoder(w.Body).Decode(&resp)).To(Succeed())
-			Expect(resp["applied"]).To(ConsistOf("tng"))
-
-			Expect(tng.reloadCount).To(Equal(1))
-			Expect(tng.lastReload.excludeKeywords).To(ConsistOf("Global Noise", "TNG Fee"))
-			Expect(tng.lastReload.accountMappings).To(Equal(map[string]string{"": "TNG"}))
-
-			pc := loader.ProviderConfig("tng")
-			Expect(pc.ExcludeKeywords).To(ConsistOf("Global Noise", "TNG Fee"))
-		})
-
-		It("returns 400 on invalid JSON without mutating providers", func() {
-			tng := &configurableMock{name: "tng"}
-			registry := providers.NewRegistry()
-			registry.Register(tng)
-
-			mux, _ := newConfigServer(config.Env{}, registry, config.NewLoader())
-
-			req := httptest.NewRequest(http.MethodPost, "/config", stringReader("{invalid"))
-			w := httptest.NewRecorder()
-			mux.ServeHTTP(w, req)
-
-			Expect(w.Code).To(Equal(http.StatusBadRequest))
-			Expect(tng.reloadCount).To(BeZero())
-		})
-
-		It("returns 400 when the body is unreadable", func() {
-			mux, _ := newConfigServer(config.Env{}, providers.NewRegistry(), config.NewLoader())
-
-			req := httptest.NewRequest(http.MethodPost, "/config", errReader{})
-			w := httptest.NewRecorder()
-			mux.ServeHTTP(w, req)
-
-			Expect(w.Code).To(Equal(http.StatusBadRequest))
-		})
-	})
-
-	Describe("DELETE /config", func() {
-		It("clears tuning on every configurable provider", func() {
-			tng := &configurableMock{name: "tng"}
-			registry := providers.NewRegistry()
-			registry.Register(tng)
-
-			loader := config.NewLoader()
-			Expect(loader.ApplyConfig([]byte(`{"global":{"exclude_keywords":["Noise"]}}`))).To(Succeed())
-			tng.lastReload.excludeKeywords = []string{"Noise"}
-
-			mux, _ := newConfigServer(config.Env{}, registry, loader)
-
-			req := httptest.NewRequest(http.MethodDelete, "/config", nil)
 			w := httptest.NewRecorder()
 			mux.ServeHTTP(w, req)
 
 			Expect(w.Code).To(Equal(http.StatusOK))
 			var resp map[string]bool
 			Expect(json.NewDecoder(w.Body).Decode(&resp)).To(Succeed())
-			Expect(resp["cleared"]).To(BeTrue())
+			Expect(resp["stored"]).To(BeTrue())
 
-			Expect(tng.reloadCount).To(Equal(1))
-			Expect(tng.lastReload.excludeKeywords).To(BeNil())
-			Expect(tng.lastReload.includeKeywords).To(BeNil())
-			Expect(tng.lastReload.categories).To(BeNil())
-			Expect(tng.lastReload.accountMappings).To(BeNil())
+			cookies := w.Result().Cookies()
+			Expect(cookies).NotTo(BeEmpty())
+			sid := cookies[0].Value
+			Expect(sid).To(HaveLen(64))
 
-			pc := loader.ProviderConfig("tng")
-			Expect(pc.ExcludeKeywords).To(BeEmpty())
+			pc := loader.SessionProviderConfig(sid, "tng")
+			Expect(pc.ExcludeKeywords).To(ConsistOf("Session Noise", "Session TNG Noise"))
+		})
+
+		It("returns 400 on invalid JSON without storing the rules", func() {
+			req := httptest.NewRequest(http.MethodPost, "/config", stringReader("{invalid"))
+			req.Header.Set("Content-Type", "application/json")
+			w := httptest.NewRecorder()
+			mux.ServeHTTP(w, req)
+
+			Expect(w.Code).To(Equal(http.StatusBadRequest))
+			Expect(loader.SessionProviderConfig(w.Result().Cookies()[0].Value, "tng").ExcludeKeywords).To(BeEmpty())
+		})
+
+		It("requires a valid session id: garbage cookies are replaced", func() {
+			req := httptest.NewRequest(http.MethodPost, "/config", stringReader(sessionConfigBody))
+			req.Header.Set("Content-Type", "application/json")
+			req.AddCookie(&http.Cookie{Name: "ah_sid", Value: "not-a-real-sid-wisely-rejected"})
+			w := httptest.NewRecorder()
+			mux.ServeHTTP(w, req)
+
+			Expect(w.Code).To(Equal(http.StatusOK))
+			Expect(w.Result().Cookies()[0].Value).To(HaveLen(64))
+		})
+
+		It("rejects new sessions with 429 when the store is full", func() {
+			loader.SessionLimit(0)
+			loader.SetSessionTTL(-1) // ensure even existing entries expire
+
+			req := httptest.NewRequest(http.MethodPost, "/config", stringReader(sessionConfigBody))
+			req.Header.Set("Content-Type", "application/json")
+			w := httptest.NewRecorder()
+			mux.ServeHTTP(w, req)
+
+			Expect(w.Code).To(Equal(http.StatusTooManyRequests))
+		})
+	})
+
+	Describe("DELETE /config", func() {
+		It("clears the caller's own session rules", func() {
+			req := httptest.NewRequest(http.MethodPost, "/config", stringReader(sessionConfigBody))
+			req.Header.Set("Content-Type", "application/json")
+			w := httptest.NewRecorder()
+			mux.ServeHTTP(w, req)
+			sid := w.Result().Cookies()[0].Value
+
+			del := httptest.NewRequest(http.MethodDelete, "/config", nil)
+			del.AddCookie(&http.Cookie{Name: "ah_sid", Value: sid})
+			w = httptest.NewRecorder()
+			mux.ServeHTTP(w, del)
+
+			Expect(w.Code).To(Equal(http.StatusOK))
+			Expect(loader.SessionProviderConfig(sid, "tng").ExcludeKeywords).To(BeEmpty())
+		})
+
+		It("is a no-op without a session cookie", func() {
+			req := httptest.NewRequest(http.MethodDelete, "/config", nil)
+			w := httptest.NewRecorder()
+			mux.ServeHTTP(w, req)
+
+			Expect(w.Code).To(Equal(http.StatusOK))
 		})
 	})
 
 	Describe("method handling", func() {
 		It("returns 405 for unsupported methods", func() {
-			mux, _ := newConfigServer(config.Env{}, providers.NewRegistry(), config.NewLoader())
-
 			req := httptest.NewRequest(http.MethodPut, "/config", nil)
 			w := httptest.NewRecorder()
 			mux.ServeHTTP(w, req)

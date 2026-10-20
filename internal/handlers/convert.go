@@ -114,7 +114,8 @@ func (handler *ConvertHandler) Convert(c fuego.ContextWithBody[ConvertRequestBod
 
 	slog.Info("request received", "provider", providerName, "size", len(upload.data))
 
-	csvBytes, err := handler.convertService.ConvertFile(c.Context(), providerName, upload.data, upload.contentType, upload.password)
+	ctx := services.WithSessionID(c.Context(), sessionID(c.Request()))
+	csvBytes, err := handler.convertService.ConvertFile(ctx, providerName, upload.data, upload.contentType, upload.password)
 	if err != nil {
 		return nil, fuego.InternalServerError{Title: "Conversion failed", Detail: err.Error()}
 	}

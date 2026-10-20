@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"strings"
 
+	"actual_helper/internal/bootstrap"
 	"actual_helper/internal/config"
 	"actual_helper/internal/models"
 	"actual_helper/internal/pdfutil"
@@ -14,31 +15,52 @@ import (
 )
 
 type ConvertService struct {
-	registry *providers.Registry
-	loader   *config.Loader
+	registry  *providers.Registry
+	loader    *config.Loader
+	factories map[string]bootstrap.ProviderFactory
 }
 
-func NewConvertService(registry *providers.Registry, loader *config.Loader) *ConvertService {
-	return &ConvertService{registry: registry, loader: loader}
+func NewConvertService(registry *providers.Registry, loader *config.Loader,
+	factories map[string]bootstrap.ProviderFactory) *ConvertService {
+	return &ConvertService{registry: registry, loader: loader, factories: factories}
+}
+
+// providerFor resolves the provider for one conversion. With session rules
+// configured it builds a fresh provider instance carrying those rules, so the
+// shared singleton stays pristine for everyone else.
+func (service *ConvertService) providerFor(ctx context.Context, providerName string) (providers.Provider, error) {
+	provider, ok := service.registry.Get(providerName)
+	if !ok {
+		return nil, fmt.Errorf("provider %q not found", providerName)
+	}
+	if provider == nil || provider.ExtractionMethod() == "" {
+		return nil, fmt.Errorf("provider %q not configured", providerName)
+	}
+	if service.loader == nil {
+		return provider, nil
+	}
+
+	pc := service.loader.SessionProviderConfig(sessionIDFromContext(ctx), providerName)
+	if pc.ExcludeKeywords == nil && pc.IncludeKeywords == nil && pc.Categories == nil && pc.AccountMappings == nil {
+		return provider, nil
+	}
+	factory, ok := service.factories[providerName]
+	if !ok {
+		return nil, fmt.Errorf("provider %q does not support session configuration", providerName)
+	}
+	return factory(pc.ExcludeKeywords, pc.IncludeKeywords, pc.Categories, pc.AccountMappings), nil
 }
 
 // ConvertFile converts file bytes, which stay in memory for the whole request.
 func (service *ConvertService) ConvertFile(ctx context.Context, providerName string, file []byte, contentType, password string) ([]byte, error) {
 	logger := slog.With("provider", providerName)
 
-	provider, ok := service.registry.Get(providerName)
-	if !ok {
-		return nil, fmt.Errorf("provider %q not found", providerName)
+	provider, err := service.providerFor(ctx, providerName)
+	if err != nil {
+		return nil, err
 	}
-
-	if provider == nil || provider.ExtractionMethod() == "" {
-		return nil, fmt.Errorf("provider %q not configured", providerName)
-	}
-
-	service.reloadProvider(providerName, provider)
 
 	var reports []models.ActualBudgetReport
-	var err error
 
 	switch {
 	case strings.Contains(contentType, "pdf"):
@@ -71,14 +93,4 @@ func (service *ConvertService) ConvertFile(ctx context.Context, providerName str
 
 	logger.InfoContext(ctx, "csv conversion complete", "bytes", len(csvData))
 	return csvData, nil
-}
-
-func (service *ConvertService) reloadProvider(name string, provider providers.Provider) {
-	if service.loader == nil {
-		return
-	}
-	pc := service.loader.ProviderConfig(name)
-	if cp, ok := provider.(providers.ConfigurableProvider); ok {
-		cp.Reload(pc.ExcludeKeywords, pc.IncludeKeywords, pc.Categories, pc.AccountMappings)
-	}
 }
