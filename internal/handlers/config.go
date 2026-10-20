@@ -2,30 +2,31 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"io"
 	"log/slog"
 	"net/http"
 
 	"actual_helper/internal/config"
-	"actual_helper/internal/providers"
 )
 
-// ConfigHandler exposes the provider-config lifecycle:
+// ConfigHandler exposes the session-scoped provider-config lifecycle:
 //
 //	GET    /config  -> download the sample config file at env.ProviderConfigPath
-//	POST   /config  -> upload user config JSON, apply tuning to all providers
-//	DELETE /config  -> unload: clear tuning back to empty on all providers
+//	POST   /config  -> store the posted rules for the caller's session (ah_sid cookie)
+//	DELETE /config  -> clear the caller's own session rules
 //
-// The config is held in memory on the config.Loader; the sample file is read
-// on demand for downloads and never auto-applied.
+// Rules only ever apply to the holder of the session cookie, so no
+// authentication is needed: a visitor can tune their own conversions but
+// cannot affect anyone else's. The rules are held in memory per session id on
+// the config.Loader and expire after the loader's session TTL.
 type ConfigHandler struct {
-	loader   *config.Loader
-	registry *providers.Registry
-	env      config.Env
+	loader *config.Loader
+	env    config.Env
 }
 
-func NewConfigHandler(loader *config.Loader, registry *providers.Registry, env config.Env) *ConfigHandler {
-	return &ConfigHandler{loader: loader, registry: registry, env: env}
+func NewConfigHandler(loader *config.Loader, env config.Env) *ConfigHandler {
+	return &ConfigHandler{loader: loader, env: env}
 }
 
 func (handler *ConfigHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -54,7 +55,15 @@ func (handler *ConfigHandler) download(w http.ResponseWriter, _ *http.Request) {
 	w.Write(data)
 }
 
+// upload stores the posted rules for the caller's session only.
 func (handler *ConfigHandler) upload(w http.ResponseWriter, r *http.Request) {
+	sid, err := ensureSession(w, r)
+	if err != nil {
+		slog.Error("session issue failed", "error", err)
+		http.Error(w, "session error", http.StatusInternalServerError)
+		return
+	}
+
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		http.Error(w, "invalid config", http.StatusBadRequest)
@@ -62,47 +71,31 @@ func (handler *ConfigHandler) upload(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 
-	if err := handler.loader.ApplyConfig(body); err != nil {
+	if err := handler.loader.ApplySessionConfig(sid, body); err != nil {
+		if errors.Is(err, config.ErrTooManySessions) {
+			slog.Warn("config session store full", "error", err)
+			http.Error(w, "too many active sessions; retry later", http.StatusTooManyRequests)
+			return
+		}
 		slog.Warn("config upload rejected", "error", err)
 		http.Error(w, "invalid config", http.StatusBadRequest)
 		return
 	}
 
-	applied := handler.applyToProviders()
-	slog.Info("config applied", "providers", applied)
-
+	slog.Info("session config applied")
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]any{"applied": applied})
+	json.NewEncoder(w).Encode(map[string]bool{"stored": true})
 }
 
-func (handler *ConfigHandler) unload(w http.ResponseWriter, _ *http.Request) {
-	handler.loader.ClearConfig()
-
-	for _, provider := range handler.registry.All() {
-		if cp, ok := provider.(providers.ConfigurableProvider); ok {
-			cp.Reload(nil, nil, nil, nil)
-		}
+// unload clears the caller's own session rules; a no-op without a cookie.
+func (handler *ConfigHandler) unload(w http.ResponseWriter, r *http.Request) {
+	sid := sessionID(r)
+	if sid != "" {
+		handler.loader.ClearSession(sid)
 	}
-
-	slog.Info("config cleared")
+	slog.Info("session config cleared")
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]bool{"cleared": true})
-}
-
-// applyToProviders pushes the merged per-provider tuning to every registered
-// ConfigurableProvider and returns the names that received an update.
-func (handler *ConfigHandler) applyToProviders() []string {
-	applied := make([]string, 0)
-	for _, provider := range handler.registry.All() {
-		cp, ok := provider.(providers.ConfigurableProvider)
-		if !ok {
-			continue
-		}
-		pc := handler.loader.ProviderConfig(provider.Name())
-		cp.Reload(pc.ExcludeKeywords, pc.IncludeKeywords, pc.Categories, pc.AccountMappings)
-		applied = append(applied, provider.Name())
-	}
-	return applied
 }
 
 // RegisterConfigRoutes wires the config lifecycle endpoints on the given mux.

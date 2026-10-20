@@ -2,6 +2,8 @@ module actual_helper
 
 go 1.27.0
 
+toolchain go1.27.2
+
 require (
 	github.com/getkin/kin-openapi v0.147.0
 	github.com/go-fuego/fuego v0.20.0

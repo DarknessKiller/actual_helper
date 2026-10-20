@@ -31,13 +31,17 @@ The project follows strict three-layer separation:
 
 ### Config Lifecycle
 
-Providers are statically compiled into the binary and always active; configuration is tuning only. Config is empty by default and lives in memory — nothing is read from disk at startup or per request.
+Providers are statically compiled into the binary and always active; configuration is tuning only. **Config is session-scoped and empty by default**: each visitor's rules live in memory under their `ah_sid` cookie and expire after 24 h. Nothing is read from disk at startup or per request, and nothing one visitor does can change another visitor's output.
 
 - `GET /config` — download the sample config file (served from `PROVIDER_CONFIG_PATH`; `404` if unset/unreadable)
-- `POST /config` — upload a config `{global, providers}`; validated and hot-applied to every provider on the next request
-- `DELETE /config` — clear all tuning back to empty
+- `POST /config` — upload a config `{global, providers}`; validated and stored for **the caller's session only** (`400` on invalid JSON). The next conversion from the same session merges these rules over the built-in defaults
+- `DELETE /config` — clear **the caller's own** session rules back to empty (`no-op` without a valid session cookie)
 
-Invalid uploaded config is rejected with `400` and the previously loaded config stays active.
+### Security
+
+- No admin auth needed: `POST/DELETE /config` act only on the caller's own session (see Config Lifecycle), so a public deployment has no global blast radius from a config write.
+- Session config store is bounded (`maxSessions` = 1024, expired entries pruned lazily) and `POST /config` returns `429` when full.
+- Uploads are capped (`maxUploadBytes`), OCR runs with a 5-minute context timeout, and a rate-limit middleware guards the convert routes.
 
 ---
 
@@ -166,17 +170,17 @@ Downloads the sample config file (served from `PROVIDER_CONFIG_PATH`). `404` whe
 
 ### POST /config
 
-Uploads a config JSON `{global, providers}`. Validated and hot-applied to every provider on the next request. Invalid JSON or missing body → `400` (previous config stays active).
+Stores a config JSON `{global, providers}` for the caller's **session only** (issues the `ah_sid` cookie). Invalid JSON or missing body → `400` (the session's previous rules stay active); session store full → `429`.
 
 ### DELETE /config
 
-Unloads the config: clears all tuning back to empty.
+Clears **the caller's own** session rules back to empty; a no-op without a valid `ah_sid` cookie.
 
 ---
 
 ## Configuration
 
-Providers run with empty tuning until you load a config via `POST /config` (or `DELETE /config` to clear it). `PROVIDER_CONFIG_PATH` only tells `GET /config` where the sample file lives — it is never auto-applied.
+Providers run with empty tuning until a session posts config. `POST /config` scopes rules to one session — the merge in the next section applies to that session's provider instances. `PROVIDER_CONFIG_PATH` only tells `GET /config` where the sample file lives — it is never auto-applied.
 
 ### Schema
 
@@ -197,47 +201,6 @@ Providers run with empty tuning until you load a config via `POST /config` (or `
       "categories": [
         { "keyword": "grab", "group": "Food & Dining", "category": "Delivery" }
       ]
-    },
-    "ryt": {
-      "account_mappings": { "": "RYT" }
-    },
-    "hsbccredit": {
-      "account_mappings": { "1234 5678 9012 3456": "HSBC Credit Card" },
-      "exclude_keywords": ["Grab"],
-      "include_keywords": [],
-      "categories": [
-        { "keyword": "shopee", "group": "Shopping", "category": "Online" }
-      ]
-    },
-    "hlb": {
-      "account_mappings": {
-        "1234 5678 9012 3456": "HLB Credit Card",
-        "HLB Debit Account": "HLB Savings"
-      },
-      "exclude_keywords": [],
-      "include_keywords": [],
-      "categories": [
-        { "keyword": "grab", "group": "Food & Dining", "category": "Delivery" }
-      ]
-    },
-    "uobcredit": {
-      "account_mappings": { "1234 5678 9012 3456": "UOB Credit Card" },
-      "exclude_keywords": [],
-      "include_keywords": [],
-      "categories": []
-    },
-    "gxbank": {
-      "account_mappings": {
-        "GX Savings Account": "GX Savings",
-        "Secret stash Bonus Pocket": "GX Pocket"
-      },
-      "exclude_keywords": [],
-      "include_keywords": [],
-      "categories": [
-        { "keyword": "interest earned", "group": "Income", "category": "Interest" },
-        { "keyword": "duitnow", "group": "Transfer", "category": "DuitNow" },
-        { "keyword": "pocket", "group": "Transfer", "category": "Pocket" }
-      ]
     }
   }
 }
@@ -252,9 +215,10 @@ Providers run with empty tuning until you load a config via `POST /config` (or `
 | `categories` | Global rules first, then provider-specific rules appended; first match wins |
 | `account_mappings` | Provider-specific only |
 
-Config is optional and empty by default. Invalid uploads are rejected with `400` and the previously loaded config stays active.
+Config is optional and empty by default. Invalid uploads are rejected with `400` and the session's previously loaded rules stay active.
 
 ---
+
 
 ## Testing
 
@@ -272,7 +236,7 @@ Each package has its own test suite covering success paths, failure paths, and e
 
 | | |
 |---|---|
-| **Language** | Go 1.26 |
+| **Language** | Go 1.27 |
 | **Web framework** | [Fuego](https://github.com/go-fuego/fuego) |
 | **Testing** | Ginkgo v2, Gomega, httptest |
 | **PDF extraction** | ledongthuc/pdf (digital), pdftotext (text extraction), tesseract + gosseract (OCR fallback) |

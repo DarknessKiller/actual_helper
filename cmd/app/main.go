@@ -1,9 +1,6 @@
 package main
 
 import (
-	"io/fs"
-	"log"
-
 	"actual_helper/frontend"
 	"actual_helper/internal/bootstrap"
 	"actual_helper/internal/config"
@@ -16,28 +13,30 @@ import (
 	uobcreditprov "actual_helper/internal/providers/uobcredit"
 	"actual_helper/internal/ratelimit"
 	"actual_helper/internal/services"
+	"io/fs"
+	"log"
 
 	"github.com/go-fuego/fuego"
 )
 
 func main() {
-	registry, loader, env := bootstrap.Init(map[string]bootstrap.ProviderFactory{
+	factories := map[string]bootstrap.ProviderFactory{
 		"tng":        tngprov.New,
 		"ryt":        rytprov.New,
 		"hsbccredit": hsbccreditprov.New,
 		"hlb":        hlbprov.New,
 		"gxbank":     gxbankprov.New,
 		"uobcredit":  uobcreditprov.New,
-	})
-
+	}
+	registry, loader, env := bootstrap.Init(factories)
 	server := config.NewFuegoServer(env)
 
-	convertService := services.NewConvertService(registry, loader)
+	convertService := services.NewConvertService(registry, loader, factories)
 	handler := handlers.NewConvertHandler(convertService)
 	fuego.Use(server, ratelimit.Middleware)
 	handlers.RegisterConvertRoutes(server, handler)
 
-	configHandler := handlers.NewConfigHandler(loader, registry, env)
+	configHandler := handlers.NewConfigHandler(loader, env)
 	handlers.RegisterConfigRoutes(server.Mux, configHandler)
 
 	dist, err := fs.Sub(frontend.FS, "dist")

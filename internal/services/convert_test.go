@@ -6,6 +6,8 @@ import (
 	"io"
 	"strings"
 
+	"actual_helper/internal/bootstrap"
+	"actual_helper/internal/config"
 	"actual_helper/internal/models"
 	"actual_helper/internal/pdfutil"
 	"actual_helper/internal/providers"
@@ -45,7 +47,7 @@ var _ = Describe("ConvertService", func() {
 
 	BeforeEach(func() {
 		reg = providers.NewRegistry()
-		svc = services.NewConvertService(reg, nil)
+		svc = services.NewConvertService(reg, nil, map[string]bootstrap.ProviderFactory{})
 	})
 
 	Describe("ConvertFile", func() {
@@ -149,6 +151,88 @@ var _ = Describe("ConvertService", func() {
 			data, err := services.ToActualCSV([]models.ActualBudgetReport{})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(bytes.HasSuffix(data, []byte("\n"))).To(BeTrue())
+		})
+
+		Describe("session-scoped config", func() {
+			type sessionMock struct {
+				mockProvider
+				excludeKeywords []string
+			}
+
+			var loader *config.Loader
+			var builds []*sessionMock
+
+			// sessionFactory records every built instance so per-request isolation
+			// can be observed without touching the shared registry singleton.
+			sessionFactory := func() bootstrap.ProviderFactory {
+				return func(excludeKeywords, _ []string, _ []models.CategoryRule, _ map[string]string) providers.Provider {
+					m := &sessionMock{
+						mockProvider:    mockProvider{name: "test", csvReports: []models.ActualBudgetReport{}},
+						excludeKeywords: excludeKeywords,
+					}
+					builds = append(builds, m)
+					return m
+				}
+			}
+
+			BeforeEach(func() {
+				loader = config.NewLoader()
+				builds = nil
+				Expect(loader.ApplySessionConfig("session-a", []byte(`{"providers":{"test":{"exclude_keywords":["One"]}}}`))).To(Succeed())
+				Expect(loader.ApplySessionConfig("session-b", []byte(`{"providers":{"test":{"exclude_keywords":["Two"]}}}`))).To(Succeed())
+				reg.Register(&mockProvider{name: "test"})
+			})
+
+			It("builds a per-session provider carrying that session's rules", func() {
+				svc := services.NewConvertService(reg, loader, map[string]bootstrap.ProviderFactory{
+					"test": sessionFactory(),
+				})
+
+				_, err := svc.ConvertFile(services.WithSessionID(context.Background(), "session-a"), "test", []byte("a,b,c"), "text/csv", "")
+				Expect(err).NotTo(HaveOccurred())
+				Expect(builds).To(HaveLen(1))
+				Expect(builds[0].excludeKeywords).To(ConsistOf("One"))
+			})
+
+			It("builds a different ruleset per session id", func() {
+				svc := services.NewConvertService(reg, loader, map[string]bootstrap.ProviderFactory{
+					"test": sessionFactory(),
+				})
+
+				_, err := svc.ConvertFile(services.WithSessionID(context.Background(), "session-b"), "test", []byte("a,b,c"), "text/csv", "")
+				Expect(err).NotTo(HaveOccurred())
+				Expect(builds).To(HaveLen(1))
+				Expect(builds[0].excludeKeywords).To(ConsistOf("Two"))
+			})
+
+			It("keeps the shared provider pristine when no session rules exist", func() {
+				svc := services.NewConvertService(reg, loader, map[string]bootstrap.ProviderFactory{
+					"test": sessionFactory(),
+				})
+
+				_, err := svc.ConvertFile(context.Background(), "test", []byte("a,b,c"), "text/csv", "")
+				Expect(err).NotTo(HaveOccurred())
+				Expect(builds).To(BeEmpty())
+			})
+
+			It("fails closed when a session ruleset has no registered factory", func() {
+				svc := services.NewConvertService(reg, loader, map[string]bootstrap.ProviderFactory{})
+
+				_, err := svc.ConvertFile(services.WithSessionID(context.Background(), "session-a"), "test", []byte("a,b,c"), "text/csv", "")
+				Expect(err).To(MatchError(ContainSubstring("does not support session configuration")))
+			})
+
+			It("merges global and session rules", func() {
+				Expect(loader.ApplyConfig([]byte(`{"global":{"exclude_keywords":["Global"]}}`))).To(Succeed())
+
+				svc := services.NewConvertService(reg, loader, map[string]bootstrap.ProviderFactory{
+					"test": sessionFactory(),
+				})
+				_, err := svc.ConvertFile(services.WithSessionID(context.Background(), "session-a"), "test", []byte("a,b,c"), "text/csv", "")
+				Expect(err).NotTo(HaveOccurred())
+				Expect(builds).To(HaveLen(1))
+				Expect(builds[0].excludeKeywords).To(ConsistOf("Global", "One"))
+			})
 		})
 	})
 })
