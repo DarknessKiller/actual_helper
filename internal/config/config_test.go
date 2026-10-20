@@ -1,6 +1,8 @@
 package config_test
 
 import (
+	"time"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
@@ -91,6 +93,81 @@ var _ = Describe("Loader", func() {
 			Expect(pc.ExcludeKeywords).To(BeEmpty())
 			Expect(pc.IncludeKeywords).To(BeEmpty())
 			Expect(pc.Categories).To(BeEmpty())
+		})
+	})
+
+	Describe("SessionConfig", func() {
+		var sessionBody = []byte(`{"global":{"exclude_keywords":["SI Noise"]},"providers":{"tng":{"exclude_keywords":["SI TNG Noise"]}}}`)
+
+		It("returns empty tuning for an unknown session", func() {
+			loader := config.NewLoader()
+
+			pc := loader.SessionProviderConfig("no-such-sid", "tng")
+
+			Expect(pc.ExcludeKeywords).To(BeEmpty())
+		})
+
+		It("returns session rules after ApplySessionConfig", func() {
+			loader := config.NewLoader()
+			Expect(loader.ApplySessionConfig("sid-a", sessionBody)).To(Succeed())
+
+			pc := loader.SessionProviderConfig("sid-a", "tng")
+			Expect(pc.ExcludeKeywords).To(ConsistOf("SI Noise", "SI TNG Noise"))
+		})
+
+		It("keeps sessions isolated", func() {
+			loader := config.NewLoader()
+			Expect(loader.ApplySessionConfig("sid-a", sessionBody)).To(Succeed())
+
+			pc := loader.SessionProviderConfig("sid-b", "tng")
+			Expect(pc.ExcludeKeywords).To(BeEmpty())
+		})
+
+		It("expires sessions lazily with no goroutine", func() {
+			loader := config.NewLoader()
+			loader.SetSessionTTL(-1 * time.Second)
+			Expect(loader.ApplySessionConfig("sid-a", sessionBody)).To(Succeed())
+
+			pc := loader.SessionProviderConfig("sid-a", "tng")
+			Expect(pc.ExcludeKeywords).To(BeEmpty())
+		})
+
+		It("rejects new sessions when the store is full", func() {
+			loader := config.NewLoader()
+			loader.SessionLimit(2)
+
+			Expect(loader.ApplySessionConfig("s1", sessionBody)).To(Succeed())
+			Expect(loader.ApplySessionConfig("s2", sessionBody)).To(Succeed())
+			err := loader.ApplySessionConfig("s3", sessionBody)
+			Expect(err).To(MatchError(config.ErrTooManySessions))
+		})
+
+		It("prunes expired sessions on the next write", func() {
+			loader := config.NewLoader()
+			loader.SetSessionTTL(-1 * time.Second)
+			loader.SessionLimit(1)
+			Expect(loader.ApplySessionConfig("stale", sessionBody)).To(Succeed())
+
+			Expect(loader.ApplySessionConfig("fresh", sessionBody)).To(Succeed())
+		})
+
+		It("clears one session only on ClearSession", func() {
+			loader := config.NewLoader()
+			Expect(loader.ApplySessionConfig("sid-a", sessionBody)).To(Succeed())
+			Expect(loader.ApplySessionConfig("sid-b", sessionBody)).To(Succeed())
+
+			loader.ClearSession("sid-a")
+
+			Expect(loader.SessionProviderConfig("sid-a", "tng").ExcludeKeywords).To(BeEmpty())
+			Expect(loader.SessionProviderConfig("sid-b", "tng").ExcludeKeywords).To(ConsistOf("SI Noise", "SI TNG Noise"))
+		})
+
+		It("keeps a previous config on invalid JSON", func() {
+			loader := config.NewLoader()
+			Expect(loader.ApplySessionConfig("sid-a", sessionBody)).To(Succeed())
+
+			Expect(loader.ApplySessionConfig("sid-a", []byte(`not json`))).To(HaveOccurred())
+			Expect(loader.SessionProviderConfig("sid-a", "tng").ExcludeKeywords).To(ConsistOf("SI Noise", "SI TNG Noise"))
 		})
 	})
 

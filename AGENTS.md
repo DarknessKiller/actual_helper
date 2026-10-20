@@ -124,45 +124,21 @@ Always empty in `ActualBudgetReport`. Description value goes in `Notes`.
 
 `isCredit()` returns true for: `Reload`, `Receive from Wallet`, `DUITNOW_RECEIVEFROM`, `Refund`, `GO+ Daily Earnings`, `GO+ Cash In`. Credits are positive amounts, debits are negative.
 
-### Config Lifecycle (not provider activation)
+### Config Lifecycle (session-scoped)
 
-Providers are statically compiled into the binary and **always active** (registered in `cmd/app/main.go`). Config is **tuning only** — exclude/include keywords, category rules, account mappings — applied via `ConfigurableProvider.Reload`. The lifecycle endpoints below manage config, never provider activation. There is no provider unload, no plugin/.so/WASM.
-
-Config is **empty by default**: nothing is auto-loaded at startup and nothing is read from disk per request. The `config.Loader` holds the active config in memory; `ProviderConfig(name)` reads memory under a mutex with no file I/O.
+Providers are statically compiled into the binary and **always active** (registered in `cmd/app/main.go`). Config is **tuning only** — exclude/include keywords, category rules, account mappings — and is **session-scoped**: each visitor's rules are stored in `config.Loader.sessions` under their `ah_sid` cookie and expire after 24 h (lazy eviction; no background goroutines, no file polling). There is no provider unload, no plugin/.so/WASM.
 
 Endpoints:
 
 * `GET /config` — download the sample config file at `PROVIDER_CONFIG_PATH` (`application/json`); 404 when the path is empty or unreadable. The file is read on demand and **never auto-applied**.
-* `POST /config` — upload a user config JSON `{global, providers}`. Validated by unmarshalling into the config struct; invalid JSON or empty body → 400 (the existing config stays untouched). On success the merged rules for every registered `ConfigurableProvider` are pushed via `Reload(...)` — hot reload, applies to the next request.
-* `DELETE /config` — unload: applies empty tuning (`Reload(nil, nil, nil, nil)`) to every `ConfigurableProvider` and clears the in-memory config.
+* `POST /config` — upload a user config JSON `{global, providers}`. Validated by unmarshalling into the config struct; invalid JSON or empty body → 400 (the session's stored rules stay untouched); session store full → 429 (`ErrTooManySessions`, cap 1024). On success the rules are stored under the caller's session id (cookie issued on first POST, HttpOnly+SameSite=Lax). No authentication: session rules can only change that session's conversions.
+* `DELETE /config` — clears the caller's own session rules; a no-op without a valid cookie.
 
-Format:
-```json
-{
-  "global": {
-    "exclude_keywords": ["Global Noise"],
-    "include_keywords": [],
-    "categories": [{"keyword": "shopee", "group": "Shopping", "category": "Online"}]
-  },
-  "providers": {
-    "tng": {
-      "exclude_keywords": ["Quick Reload Payment", "Via eWallet to GO+"],
-      "include_keywords": ["Daily Interest"],
-      "categories": [
-        {"keyword": "grab", "group": "Food & Dining", "category": "Delivery"}
-      ]
-    }
-  }
-}
-```
-
-Per-provider rules are merged over `global`: `exclude_keywords`/`include_keywords` unions; `categories` = global first, then provider-specific, first match wins; `account_mappings` = provider-specific only.
-
-`include_keywords` act as a whitelist when configured: only rows matching any include keyword pass through; everything else is skipped. When `include_keywords` is empty, exclude-only filtering applies.
+On `/convert/{provider}` the handler stamps the session id into the request context (`services.WithSessionID`). `ConvertService.providerFor` looks up `SessionProviderConfig(sid, name)`: when empty → the shared registry singleton; when non-empty → a **fresh provider instance** built from the registered `bootstrap.ProviderFactory` carrying that session's merged rules, so the shared singleton stays pristine and concurrent users cannot leak rules into each other.
 
 ### Hot-Reload
 
-No background goroutines and no file-mtime polling (the old per-request `os.Stat`/`ReadFile`/`json.Unmarshal` path is gone). The service calls `loader.ProviderConfig(name)` — a memory read under the loader's mutex — and pushes the merged rules to the provider via `ConfigurableProvider.Reload()` **before each request** (`services/convert.go:reloadProvider`). A `POST /config` therefore takes effect on the next request with zero delay.
+No background goroutines and no file-mtime polling (the old per-request `os.Stat`/`ReadFile`/`json.Unmarshal` path is gone). The service calls `loader.SessionProviderConfig(sid, name)` — a memory read under the loader's mutex — and pushes the merged rules to the provider via `ConfigurableProvider.Reload()` **before each request** (`services/convert.go:providerFor`). A `POST /config` therefore takes effect on the next request with zero delay.
 
 Rejected uploads — invalid JSON is returned as a 400 by the handler and leaves the current in-memory config untouched; providers keep their existing tuning.
 

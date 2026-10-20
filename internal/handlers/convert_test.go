@@ -13,6 +13,7 @@ import (
 	"actual_helper/internal/models"
 	"actual_helper/internal/pdfutil"
 	"actual_helper/internal/providers"
+	"actual_helper/internal/bootstrap"
 	"actual_helper/internal/services"
 
 	"github.com/go-fuego/fuego"
@@ -45,7 +46,7 @@ var _ = Describe("ConvertHandler", func() {
 		It("returns 400 when file is missing", func() {
 			reg := providers.NewRegistry()
 			reg.Register(&mockProvider{name: "test"})
-			svc := services.NewConvertService(reg, nil)
+			svc := services.NewConvertService(reg, nil, map[string]bootstrap.ProviderFactory{})
 			dummyHandler := handlers.NewConvertHandler(svc)
 
 			c := fuego.NewServer()
@@ -60,7 +61,7 @@ var _ = Describe("ConvertHandler", func() {
 
 		It("returns 500 for unregistered provider", func() {
 			reg := providers.NewRegistry()
-			svc := services.NewConvertService(reg, nil)
+			svc := services.NewConvertService(reg, nil, map[string]bootstrap.ProviderFactory{})
 			dummyHandler := handlers.NewConvertHandler(svc)
 
 			s := fuego.NewServer()
@@ -89,7 +90,7 @@ var _ = Describe("ConvertHandler", func() {
 			reg := providers.NewRegistry()
 			reg.Register(&mockProvider{name: "test"})
 
-			svc := services.NewConvertService(reg, nil)
+			svc := services.NewConvertService(reg, nil, map[string]bootstrap.ProviderFactory{})
 			dummyHandler := handlers.NewConvertHandler(svc)
 
 			s := fuego.NewServer()
