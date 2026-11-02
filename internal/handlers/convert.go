@@ -68,7 +68,6 @@ func parseUpload(r *http.Request, limit int64) (*uploadedFile, error) {
 		case "file":
 			upload.contentType = part.Header.Get("Content-Type")
 			data, err := io.ReadAll(io.LimitReader(part, limit+1))
-			part.Close()
 			if err != nil {
 				return nil, err
 			}
@@ -79,13 +78,11 @@ func parseUpload(r *http.Request, limit int64) (*uploadedFile, error) {
 			upload.data = data
 		case "password":
 			password, err := io.ReadAll(io.LimitReader(part, maxPasswordBytes))
-			part.Close()
 			if err != nil {
 				return nil, err
 			}
 			upload.password = string(password)
 		default:
-			part.Close()
 		}
 	}
 
@@ -126,7 +123,9 @@ func (handler *ConvertHandler) Convert(c fuego.ContextWithBody[ConvertRequestBod
 
 	c.Response().Header().Set("Content-Type", "text/csv")
 	c.Response().Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, fileName))
-	c.Response().Write(csvBytes)
+	if _, err := c.Response().Write(csvBytes); err != nil {
+		slog.Warn("write response failed", "provider", providerName, "error", err)
+	}
 
 	slog.Info("response sent", "provider", providerName, "bytes", len(csvBytes))
 	return nil, nil

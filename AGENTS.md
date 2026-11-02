@@ -1,5 +1,17 @@
 # Agent Instructions
 
+## Default routine
+
+1. Read `CODING_STANDARDS.md` before changing a `.go` file. It holds this repo's error,
+   logging, layer and test rules.
+2. Locate the code with CodeGraph when `.codegraph/` exists; run `codegraph init` at the
+   repo root when it is missing.
+3. Change the smallest thing that satisfies the task: return every error or log it with
+   `slog`, never sink it in `_`.
+4. Verify with the block at the end of `CODING_STANDARDS.md`
+   (`go tool golangci-lint run`, `CGO_ENABLED=0 go test ./...`).
+5. Re-read each changed line against the standards before handing off.
+
 ## Project
 
 A Go web server (Fuego) that converts bank/fintech transaction files (CSV or PDF) into Actual Budget-compatible CSV format. Designed for multiple providers.
@@ -179,9 +191,11 @@ OCR (`hsbccredit`) shells out to the `tesseract` CLI via `exec.CommandContext`, 
 
 ### Data Privacy
 
-All test data MUST use fake/anonymized data — no real names, reference IDs, account numbers, or other personal information. Real personal data should never be committed to the repository.
-
-Every implementation should include tests for:
+Test data is synthetic. A statement pasted into a session is a real person's data, so replace
+every name, address, item, card/account number and amount with a placeholder from
+`CODING_STANDARDS.md#test-data-is-synthetic` before it reaches a spec, a `testdata` file or a
+string literal. Amounts are round ringgit (`10.00`); cents belong only to a spec about cents.
+A pasted PDF is never committed.
 
 ### Success Paths
 

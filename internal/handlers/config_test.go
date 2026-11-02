@@ -106,6 +106,15 @@ var _ = Describe("ConfigHandler", func() {
 			Expect(loader.SessionProviderConfig(w.Result().Cookies()[0].Value, "tng").ExcludeKeywords).To(BeEmpty())
 		})
 
+		It("returns 400 when the body cannot be read", func() {
+			req := httptest.NewRequest(http.MethodPost, "/config", errReader{})
+			req.Header.Set("Content-Type", "application/json")
+			w := httptest.NewRecorder()
+			mux.ServeHTTP(w, req)
+
+			Expect(w.Code).To(Equal(http.StatusBadRequest))
+		})
+
 		It("requires a valid session id: garbage cookies are replaced", func() {
 			req := httptest.NewRequest(http.MethodPost, "/config", stringReader(sessionConfigBody))
 			req.Header.Set("Content-Type", "application/json")

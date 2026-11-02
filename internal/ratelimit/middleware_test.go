@@ -15,8 +15,8 @@ var _ = Describe("RateLimiter", func() {
 	var handler http.Handler
 
 	BeforeEach(func() {
-		os.Unsetenv("RATE_LIMIT_RATE")
-		os.Unsetenv("RATE_LIMIT_BURST")
+		Expect(os.Unsetenv("RATE_LIMIT_RATE")).To(Succeed())
+		Expect(os.Unsetenv("RATE_LIMIT_BURST")).To(Succeed())
 		handler = ratelimit.Middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusOK)
 		}))

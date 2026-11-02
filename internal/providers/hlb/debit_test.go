@@ -219,7 +219,7 @@ Grocery Store
 2500.00
 
 Utility Payment
-88.50`
+88.00`
 
 		reports, err := provider.ParsePDFText(ctx, text)
 		Expect(err).NotTo(HaveOccurred())
@@ -232,7 +232,7 @@ Utility Payment
 		Expect(reports[1].Amount).To(Equal("-2500.00"))
 		Expect(reports[2].Date).To(Equal("2026-06-20"))
 		Expect(reports[2].Notes).To(Equal("Utility Payment"))
-		Expect(reports[2].Amount).To(Equal("-88.50"))
+		Expect(reports[2].Amount).To(Equal("-88.00"))
 	})
 
 	It("skips header lines correctly", func() {

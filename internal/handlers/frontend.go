@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"encoding/json"
 	"io/fs"
 	"net/http"
 	"os"
@@ -24,7 +23,7 @@ func RegisterFrontendRoutes(mux *http.ServeMux, distFS fs.FS) {
 
 	mux.HandleFunc("/version", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]string{"version": config.Version})
+		writeJSON(w, map[string]string{"version": config.Version})
 	})
 
 	mux.Handle("/", spaHandler(distFS, devDir))

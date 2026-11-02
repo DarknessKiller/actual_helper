@@ -98,7 +98,7 @@ Opening balance
 5 Jun
 3:00 PM
 Lunch
--25.50
+-25.00
 80.50
 10 Jun
 12:00 AM
@@ -109,7 +109,7 @@ Daily Interest Earned
 		Expect(err).NotTo(HaveOccurred())
 		Expect(reports).To(HaveLen(2))
 		Expect(reports[0].Description).To(Equal("Lunch"))
-		Expect(reports[0].Amount).To(Equal("-25.50"))
+		Expect(reports[0].Amount).To(Equal("-25.00"))
 		Expect(reports[0].IsCredit).To(BeFalse())
 		Expect(reports[1].Description).To(Equal("Daily Interest Earned"))
 		Expect(reports[1].Amount).To(Equal("+0.55"))

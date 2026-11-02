@@ -34,13 +34,13 @@ Your charge(s) for this month RM259.00`
 	It("parses a debit transaction (purchase) as negative", func() {
 		text := `Statement Date 04 Jun 2026
 Post date | Transaction date | Transaction details | Amount (RM)
-06 MAY 05 MAY AP Online Retail MY 8.50
-Your charge(s) for this month RM8.50`
+06 MAY 05 MAY AP Online Retail MY 8.00
+Your charge(s) for this month RM8.00`
 
 		reports, err := provider.ParsePDFText(ctx, text)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(reports).To(HaveLen(1))
-		Expect(reports[0].Amount).To(Equal("-8.50"))
+		Expect(reports[0].Amount).To(Equal("-8.00"))
 		Expect(reports[0].Date).To(Equal("2026-05-05"))
 		Expect(reports[0].Notes).To(Equal("AP Online Retail MY"))
 	})
@@ -48,14 +48,14 @@ Your charge(s) for this month RM8.50`
 	It("parses multiple transactions", func() {
 		text := `Statement Date 04 Jun 2026
 Post date | Transaction date | Transaction details | Amount (RM)
-06 MAY 05 MAY AP Online Retail 8.50
+06 MAY 05 MAY AP Online Retail 8.00
 15 MAY 14 MAY Digital Service 38.00
 Your charge(s) for this month RM50.50`
 
 		reports, err := provider.ParsePDFText(ctx, text)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(reports).To(HaveLen(2))
-		Expect(reports[0].Amount).To(Equal("-8.50"))
+		Expect(reports[0].Amount).To(Equal("-8.00"))
 		Expect(reports[1].Amount).To(Equal("-38.00"))
 	})
 
@@ -109,7 +109,7 @@ Post date | Transaction date | Transaction details | Amount (RM)
 		provider := hsbccreditprov.New([]string{"Online"}, nil, nil, nil)
 		text := `Statement Date 04 Jun 2026
 Post date | Transaction date | Transaction details | Amount (RM)
-06 MAY 05 MAY AP Online Retail 8.50
+06 MAY 05 MAY AP Online Retail 8.00
 10 MAY 07 MAY Ride Service 4.00`
 
 		reports, err := provider.ParsePDFText(ctx, text)
@@ -125,7 +125,7 @@ Post date | Transaction date | Transaction details | Amount (RM)
 		provider := hsbccreditprov.New(nil, nil, categories, nil)
 		text := `Statement Date 04 Jun 2026
 Post date | Transaction date | Transaction details | Amount (RM)
-06 MAY 05 MAY AP Retail Purchase MY 8.50`
+06 MAY 05 MAY AP Retail Purchase MY 8.00`
 
 		reports, err := provider.ParsePDFText(ctx, text)
 		Expect(err).NotTo(HaveOccurred())

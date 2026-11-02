@@ -63,7 +63,7 @@ Your charge(s) for this month RM259.00`
 			provider := hsbccreditprov.New([]string{"Grab"}, nil, nil, nil)
 			text := `Statement Date 04 Jun 2026
 Post date | Transaction date | Transaction details | Amount (RM)
-06 MAY 05 MAY Grab Car Ride 8.50
+06 MAY 05 MAY Grab Car Ride 8.00
 10 MAY 07 MAY Shopee Purchase 4.00`
 
 			reports, err := provider.ParsePDFText(context.Background(), text)

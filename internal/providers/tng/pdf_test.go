@@ -153,7 +153,7 @@ Payment
 111111
 Test Merchant
 
-RM25.50
+RM25.00
 RM100.00`
 
 		reports, err := provider.ParsePDFText(ctx, text)

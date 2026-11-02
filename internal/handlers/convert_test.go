@@ -9,11 +9,11 @@ import (
 	"net/http/httptest"
 	"net/textproto"
 
+	"actual_helper/internal/bootstrap"
 	"actual_helper/internal/handlers"
 	"actual_helper/internal/models"
 	"actual_helper/internal/pdfutil"
 	"actual_helper/internal/providers"
-	"actual_helper/internal/bootstrap"
 	"actual_helper/internal/services"
 
 	"github.com/go-fuego/fuego"
@@ -24,8 +24,7 @@ import (
 )
 
 type mockProvider struct {
-	name             string
-	extractionMethod pdfutil.ExtractionMethod
+	name string
 }
 
 func (m *mockProvider) Name() string { return m.name }
@@ -74,9 +73,11 @@ var _ = Describe("ConvertHandler", func() {
 			h := make(textproto.MIMEHeader)
 			h.Set("Content-Disposition", `form-data; name="file"; filename="test.csv"`)
 			h.Set("Content-Type", "text/csv")
-			fw, _ := w.CreatePart(h)
-			fw.Write([]byte("a,b,c"))
-			w.Close()
+			fw, err := w.CreatePart(h)
+			Expect(err).ToNot(HaveOccurred())
+			_, err = fw.Write([]byte("a,b,c"))
+			Expect(err).ToNot(HaveOccurred())
+			Expect(w.Close()).To(Succeed())
 
 			req := httptest.NewRequest("POST", "/convert/unknown", &buf)
 			req.Header.Set("Content-Type", w.FormDataContentType())
@@ -103,9 +104,11 @@ var _ = Describe("ConvertHandler", func() {
 			h := make(textproto.MIMEHeader)
 			h.Set("Content-Disposition", `form-data; name="file"; filename="test.csv"`)
 			h.Set("Content-Type", "text/csv")
-			fw, _ := w.CreatePart(h)
-			fw.Write([]byte("dummy,csv,data"))
-			w.Close()
+			fw, err := w.CreatePart(h)
+			Expect(err).ToNot(HaveOccurred())
+			_, err = fw.Write([]byte("dummy,csv,data"))
+			Expect(err).ToNot(HaveOccurred())
+			Expect(w.Close()).To(Succeed())
 
 			req := httptest.NewRequest("POST", "/convert/test", &buf)
 			req.Header.Set("Content-Type", w.FormDataContentType())

@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"encoding/json"
 	"errors"
 	"io"
 	"log/slog"
@@ -52,7 +51,9 @@ func (handler *ConfigHandler) download(w http.ResponseWriter, _ *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Content-Disposition", `attachment; filename="provider_config.example.json"`)
-	w.Write(data)
+	if _, err := w.Write(data); err != nil {
+		slog.Warn("write sample config failed", "path", handler.env.ProviderConfigPath, "error", err)
+	}
 }
 
 // upload stores the posted rules for the caller's session only.
@@ -66,10 +67,10 @@ func (handler *ConfigHandler) upload(w http.ResponseWriter, r *http.Request) {
 
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
+		slog.Warn("read config body failed", "error", err)
 		http.Error(w, "invalid config", http.StatusBadRequest)
 		return
 	}
-	defer r.Body.Close()
 
 	if err := handler.loader.ApplySessionConfig(sid, body); err != nil {
 		if errors.Is(err, config.ErrTooManySessions) {
@@ -84,7 +85,7 @@ func (handler *ConfigHandler) upload(w http.ResponseWriter, r *http.Request) {
 
 	slog.Info("session config applied")
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]bool{"stored": true})
+	writeJSON(w, map[string]bool{"stored": true})
 }
 
 // unload clears the caller's own session rules; a no-op without a cookie.
@@ -95,7 +96,7 @@ func (handler *ConfigHandler) unload(w http.ResponseWriter, r *http.Request) {
 	}
 	slog.Info("session config cleared")
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]bool{"cleared": true})
+	writeJSON(w, map[string]bool{"cleared": true})
 }
 
 // RegisterConfigRoutes wires the config lifecycle endpoints on the given mux.

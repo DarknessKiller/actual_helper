@@ -34,9 +34,9 @@ func NewFuegoServer(env Env) *fuego.Server {
 	// can run minutes on multi-page statements — the connection dies at 30s
 	// while the handler keeps running, surfacing as a 503 to the client.
 	// Bump to exceed the OCR budget (timeoutOCR = 5 min).
-	server.Server.ReadTimeout = 10 * time.Minute
-	server.Server.WriteTimeout = 10 * time.Minute
-	server.Server.IdleTimeout = 5 * time.Minute
+	server.ReadTimeout = 10 * time.Minute
+	server.WriteTimeout = 10 * time.Minute
+	server.IdleTimeout = 5 * time.Minute
 
 	if isProd {
 		server.OpenAPI.Description().Servers = []*openapi3.Server{

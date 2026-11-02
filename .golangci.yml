@@ -1,0 +1,17 @@
+version: "2"
+
+run:
+  tests: true
+
+linters:
+  default: standard
+  enable:
+    - errorlint
+  settings:
+    errcheck:
+      check-blank: true
+
+formatters:
+  enable:
+    - gofmt
+    - goimports

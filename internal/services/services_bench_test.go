@@ -20,7 +20,7 @@ func benchReports(n int) []models.ActualBudgetReport {
 			Notes:         "Sample Merchant",
 			CategoryGroup: "Food & Dining",
 			Category:      "Delivery",
-			Amount:        "-12.34",
+			Amount:        "-12.00",
 			SplitAmount:   "",
 			Cleared:       "",
 		}

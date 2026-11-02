@@ -23,8 +23,6 @@ type mockProvider struct {
 	csvErr     error
 	pdfReports []models.ActualBudgetReport
 	pdfErr     error
-
-	extractionMethod pdfutil.ExtractionMethod
 }
 
 func (m *mockProvider) Name() string { return m.name }

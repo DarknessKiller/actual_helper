@@ -1,6 +1,18 @@
 version: '3'
 
 tasks:
+  fmt:
+    desc: "Format Go code with gofmt and goimports"
+    cmds:
+      - go tool golangci-lint fmt
+  lint:
+    desc: "Lint Go code, test files included"
+    cmds:
+      - go tool golangci-lint run
+  test:
+    desc: "Run the Go test suite"
+    cmds:
+      - CGO_ENABLED=0 go test ./...
   release:
     desc: "Get next version, tag, and push"
     cmds:

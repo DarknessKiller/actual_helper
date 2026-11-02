@@ -48,7 +48,9 @@ func validSessionID(sid string) bool {
 		return false
 	}
 	for _, c := range sid {
-		if !((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f')) {
+		isDigit := c >= '0' && c <= '9'
+		isHexLetter := c >= 'a' && c <= 'f'
+		if !isDigit && !isHexLetter {
 			return false
 		}
 	}
