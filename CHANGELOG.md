@@ -6,6 +6,15 @@ Releases before 0.8.0 are documented in [GitHub Releases](https://github.com/Dar
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-11-02
+
+### Changed
+
+- Every Go error is returned or logged with `slog`; `_` is never an error sink, enforced by `errcheck.check-blank`.
+- golangci-lint runs locally and in CI with test files, `gofmt` and `goimports` in scope.
+- `CODING_STANDARDS.md` states the error, logging, layer, handler, test and synthetic-data rules; `AGENTS.md` gains a five-step routine that points at it.
+- Test fixtures carry synthetic placeholders and round amounts instead of statement values.
+
 ## [0.8.1] - 2026-09-25
 
 ### Fixed
