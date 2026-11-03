@@ -7,7 +7,7 @@
 
 {#if visible}
   <div
-    class="sheet rounded-[var(--radius-apple-lg)] p-6 mt-5 flex items-center gap-4"
+    class="sheet rounded-[var(--radius-apple-lg)] p-6 flex items-center gap-4"
     in:fly={{ y: 8, duration: 300 }}
     out:fade={{ duration: 200 }}
     role="status"

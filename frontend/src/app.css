@@ -26,13 +26,13 @@
   --ah-canvas: #f5f5f7;
   --ah-surface: rgba(255, 255, 255, 0.72);
   --ah-ink: #1d1d1f;
-  --ah-ink2: #6e6e73;
-  --ah-ink3: #86868b;
+  --ah-ink2: #63636a;
+  --ah-ink3: #6f6f75;
   --ah-hairline: rgba(0, 0, 0, 0.08);
-  --ah-accent: #c2540a;
+  --ah-accent: #a8480a;
   --ah-accent2: #e07818;
-  --ah-success: #30a46c;
-  --ah-danger: #ff453a;
+  --ah-success: #1a7f4b;
+  --ah-danger: #d70015;
   --ah-divider: rgba(0, 0, 0, 0.07);
 
   --ah-glass-bg: rgba(255, 255, 255, 0.6);
@@ -45,10 +45,10 @@
   --ah-field-bg: rgba(255, 255, 255, 0.8);
   --ah-field-border: rgba(0, 0, 0, 0.12);
   --ah-field-solid: #ffffff;
-  --ah-accent-tint: rgba(194, 84, 10, 0.1);
-  --ah-accent-border: rgba(194, 84, 10, 0.45);
-  --ah-accent-soft: rgba(194, 84, 10, 0.06);
-  --ah-danger-tint: rgba(255, 69, 58, 0.09);
+  --ah-accent-tint: rgba(168, 72, 10, 0.1);
+  --ah-accent-border: rgba(168, 72, 10, 0.45);
+  --ah-accent-soft: rgba(168, 72, 10, 0.06);
+  --ah-danger-tint: rgba(215, 0, 21, 0.09);
   --ah-chip-bg: rgba(0, 0, 0, 0.05);
   --ah-stat-bg: rgba(0, 0, 0, 0.03);
   --ah-progress-bg: rgba(0, 0, 0, 0.08);
@@ -56,6 +56,7 @@
 
   --shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(0, 0, 0, 0.06);
   --shadow-lift: 0 2px 8px rgba(0, 0, 0, 0.06), 0 24px 64px rgba(0, 0, 0, 0.12);
+  --ah-on-accent: #ffffff;
 }
 
 [data-theme="dark"] {
@@ -64,7 +65,7 @@
   --ah-surface: rgba(40, 40, 44, 0.72);
   --ah-ink: #f5f5f7;
   --ah-ink2: #a1a1a6;
-  --ah-ink3: #6e6e73;
+  --ah-ink3: #8e8e93;
   --ah-hairline: rgba(255, 255, 255, 0.12);
   --ah-accent: #e08a2e;
   --ah-accent2: #f0a04b;
@@ -93,6 +94,7 @@
 
   --shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.5);
   --shadow-lift: 0 2px 8px rgba(0, 0, 0, 0.5), 0 24px 64px rgba(0, 0, 0, 0.6);
+  --ah-on-accent: #161618;
 }
 
 [data-theme="amoled"] {
@@ -101,7 +103,7 @@
   --ah-surface: rgba(18, 18, 20, 0.92);
   --ah-ink: #ffffff;
   --ah-ink2: #b0b0b6;
-  --ah-ink3: #6e6e73;
+  --ah-ink3: #8e8e93;
   --ah-hairline: rgba(255, 255, 255, 0.14);
   --ah-accent: #f0a04b;
   --ah-accent2: #ffb469;
@@ -130,6 +132,7 @@
 
   --shadow-soft: none;
   --shadow-lift: 0 2px 8px rgba(0, 0, 0, 0.6);
+  --ah-on-accent: #000000;
 }
 
 html {
@@ -199,7 +202,7 @@ body {
   justify-content: center;
   gap: 8px;
   background: var(--color-accent);
-  color: #fff;
+  color: var(--ah-on-accent);
   font-weight: 600;
   border-radius: 980px;
   padding: 0 22px;
@@ -297,6 +300,13 @@ body {
 }
 .chip[data-selected] { background: var(--ah-accent-tint); color: var(--color-accent); }
 .chip[data-selected][data-danger] { background: var(--ah-danger-tint); color: var(--color-danger); }
+/* Visible focus ring on every custom control (UA ring is too faint on accent) */
+.btn-apple:focus-visible,
+.btn-ghost-apple:focus-visible,
+.chip:focus-visible {
+  outline: 2px solid var(--color-ink);
+  outline-offset: 2px;
+}
 
 /* Segmented control (theme switcher) */
 .segmented {

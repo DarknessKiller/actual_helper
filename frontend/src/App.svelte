@@ -32,7 +32,7 @@
 
 <div class="app-bg min-h-screen flex flex-col">
   <nav class="glass sticky top-0 z-20">
-    <div class="max-w-2xl mx-auto flex items-center justify-between px-5 h-14">
+    <div class="max-w-6xl 2xl:max-w-7xl mx-auto flex items-center justify-between px-5 h-14">
       <span class="font-semibold tracking-tight">Actual Helper</span>
       <div class="flex items-center gap-3">
         {#if version}
@@ -58,20 +58,36 @@
     </div>
   </nav>
 
-  <main class="max-w-2xl mx-auto w-full px-5 py-8 flex-1" in:fade={{ duration: 300 }}>
-    <ConfigPanel />
-    <UploadForm onConversionComplete={handleConversionComplete} />
+  <main class="max-w-6xl 2xl:max-w-7xl mx-auto w-full px-5 py-8 flex-1" in:fade={{ duration: 300 }}>
+    <div class="grid gap-5 md:grid-cols-5 md:items-start">
+      <div class="flex flex-col gap-5 min-w-0 md:col-span-2">
+        <ConfigPanel />
+        <UploadForm onConversionComplete={handleConversionComplete} />
+      </div>
 
-    {#if lastConversion}
-      <ResultPanel
-        filename={lastConversion.filename}
-        provider={lastConversion.provider}
-      />
-    {/if}
+      <div class="flex flex-col gap-5 min-w-0 md:col-span-3">
+        {#if lastConversion}
+          <ResultPanel
+            filename={lastConversion.filename}
+            provider={lastConversion.provider}
+          />
+        {/if}
 
-    <HistoryDashboard bind:conversions />
+        {#if conversions.length > 0}
+          <HistoryDashboard bind:conversions />
+        {:else}
+          <section class="sheet rounded-[var(--radius-apple-lg)] p-6">
+            <h2 class="text-[15px] font-semibold tracking-tight">No conversions yet</h2>
+            <ol class="mt-3 flex flex-col gap-2 text-sm copy list-decimal ps-5 marker:text-ink-3">
+              <li>Pick your bank or e-wallet.</li>
+              <li>Drop the CSV or PDF statement.</li>
+              <li>Get an Actual Budget CSV, ready to import.</li>
+            </ol>
+          </section>
+        {/if}
+      </div>
+    </div>
   </main>
-
   <footer class="text-center text-sm copy py-6">
     Actual Helper — open source tool for Actual Budget Malaysian users
   </footer>
