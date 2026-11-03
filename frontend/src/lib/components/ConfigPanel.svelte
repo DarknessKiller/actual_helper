@@ -63,7 +63,7 @@
   }
 </script>
 
-<div class="glass rounded-2xl px-5 py-4 mb-5" in:fade={{ duration: 400 }}>
+<div class="glass rounded-2xl px-5 py-4" in:fade={{ duration: 400 }}>
   <h2 class="text-[15px] font-semibold tracking-tight">Provider configuration</h2>
   <p class="text-[13px] copy mt-0.5">
     Load a JSON config to set filters, categories, and account mappings for this

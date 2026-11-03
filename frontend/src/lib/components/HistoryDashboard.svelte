@@ -37,7 +37,7 @@
 </script>
 
 {#if conversions.length > 0}
-  <section class="sheet rounded-[var(--radius-apple-lg)] p-5 mt-5" in:fade={{ duration: 300 }}>
+  <section class="sheet rounded-[var(--radius-apple-lg)] p-5" in:fade={{ duration: 300 }}>
     <div class="flex items-center justify-between mb-3">
       <h2 class="text-[15px] font-semibold tracking-tight">History</h2>
       <button class="btn-ghost-apple h-8 px-2 text-sm" data-danger onclick={handleClear}>Clear</button>
