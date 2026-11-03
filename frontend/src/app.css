@@ -233,6 +233,12 @@ body {
 .btn-ghost-apple:hover, .btn-ghost-apple:focus-visible { background: var(--ah-accent-tint); }
 .btn-ghost-apple:active { transform: scale(0.97); }
 .btn-ghost-apple[data-danger]:hover, .btn-ghost-apple[data-danger]:focus-visible { background: var(--ah-danger-tint); color: var(--color-danger); }
+/* Compact ghost buttons are 32-36px tall. On touch, grow them to the 44px
+   Apple asks for. Growing the hit area with a pseudo-element would overlap
+   the neighbouring pill in wrapped rows, so the pill itself grows here. */
+@media (pointer: coarse) {
+  .btn-ghost-apple, .chip { min-height: 44px; }
+}
 
 .theme-toggle { color: var(--color-ink-2) !important; background: var(--ah-chip-bg) !important; border: 1px solid var(--ah-field-border) !important; }
 .theme-toggle:hover { color: var(--color-ink) !important; background: var(--ah-accent-tint) !important; }

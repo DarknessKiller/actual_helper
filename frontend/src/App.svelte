@@ -33,7 +33,7 @@
 <div class="app-bg min-h-screen flex flex-col">
   <nav class="glass sticky top-0 z-20">
     <div class="max-w-6xl 2xl:max-w-7xl mx-auto flex items-center justify-between px-5 h-14">
-      <span class="font-semibold tracking-tight">Actual Helper</span>
+      <h1 class="font-semibold tracking-tight">Actual Helper</h1>
       <div class="flex items-center gap-3">
         {#if version}
           <span class="text-xs copy-dim">{version}</span>
