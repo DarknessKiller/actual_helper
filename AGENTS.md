@@ -8,9 +8,9 @@
    repo root when it is missing.
 3. Change the smallest thing that satisfies the task: return every error or log it with
    `slog`, never sink it in `_`.
-4. Verify with the block at the end of `CODING_STANDARDS.md`
-   (`go tool golangci-lint run`, `CGO_ENABLED=0 go test ./...`).
-5. Re-read each changed line against the standards before handing off.
+4. Verify before handoff with the `change-verification` skill: a fresh subagent checks
+   every changed line against the standards and runs the Verify block; fix every blocker
+   and hand off only on PASS.
 
 ## Project
 
